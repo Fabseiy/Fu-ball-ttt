@@ -1,0 +1,3065 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Fußball-Tic-Tac-Toe</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Permanent+Marker&display=swap">
+<style>
+html{color-scheme:light}[hidden]{display:none!important}img{max-width:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+/* Layout: eine Taktiktafel – Menü mit drei Spielarten, dann 4×4-Raster mit Kategorien als Kopfzeilen, X und O wie Markierungen auf der Trainertafel */
+:root{
+  --bg:#e6ebe8; --board:#fafcfb; --soft:#eef2f0; --ink:#17231d; --muted:#56665d;
+  --line:#c2cdc7; --x:#c42b22; --o:#1d4ea8; --accent:#25704a; --win:#ffe7a0; --bad:#b3261e; --good:#1f7a45;
+  --coin:#d9b84f; --coinhi:#fbefb8; --coinrim:#9c7426; --coinx:#a8231b; --coino:#1b4597;
+  --f-display:'Permanent Marker','Comic Sans MS',cursive;
+  --f-body:'Barlow',system-ui,-apple-system,sans-serif;
+  --f-cond:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121d17; --board:#1b2922; --soft:#21322a; --ink:#e5ece7; --muted:#97a99f;
+    --line:#33473c; --x:#ff7d70; --o:#86b4ff; --accent:#7ccf98; --win:#4b4420; --bad:#ff8a80; --good:#7ccf98;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121d17; --board:#1b2922; --soft:#21322a; --ink:#e5ece7; --muted:#97a99f;
+  --line:#33473c; --x:#ff7d70; --o:#86b4ff; --accent:#7ccf98; --win:#4b4420; --bad:#ff8a80; --good:#7ccf98;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+section.wrap{width:100%}
+h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,8vw,42px);line-height:1.05;margin:0;text-wrap:balance}
+h1 .x{color:var(--x)} h1 .o{color:var(--o)}
+.sub{color:var(--muted);margin:6px 0 0;font-size:15px;max-width:52ch}
+.lbl{font:700 13px var(--f-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:999px;overflow:hidden;background:var(--board)}
+.seg button{font:600 13px/1 var(--f-cond);letter-spacing:.04em;text-transform:uppercase;border:0;background:transparent;color:var(--muted);padding:10px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.diffrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.modes{display:flex;flex-direction:column;gap:10px}
+.mode{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;text-align:left;width:100%;cursor:pointer;
+  background:var(--board);border:2px solid var(--line);border-radius:16px;padding:16px;color:var(--ink);font:inherit;transition:border-color .15s}
+.mode:hover{border-color:var(--accent)}
+.mode .ic{font-family:var(--f-display);font-size:30px;line-height:1;width:52px;text-align:center}
+.mode .ic .x{color:var(--x)} .mode .ic .o{color:var(--o)}
+.mode b{display:block;font:700 19px/1.15 var(--f-cond);letter-spacing:.02em;text-transform:uppercase}
+.mode span.d{display:block;color:var(--muted);font-size:14px;margin-top:2px}
+.mode .go{font:700 22px var(--f-cond);color:var(--accent)}
+.mode.primary{border-color:var(--accent)}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.topbar .t{font:700 14px var(--f-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.btn{font:700 14px/1 var(--f-cond);letter-spacing:.05em;text-transform:uppercase;border-radius:10px;border:1.5px solid var(--ink);background:var(--ink);color:var(--bg);padding:11px 14px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.small{padding:8px 11px;font-size:13px}
+.btn[disabled]{opacity:.45;cursor:default}
+.score{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;background:var(--board);border:1.5px solid var(--line);border-radius:14px;padding:10px 14px}
+.side{display:flex;align-items:center;gap:10px;min-width:0}
+.side.r{justify-content:flex-end;text-align:right}
+.mk{font-family:var(--f-display);font-size:30px;line-height:1}
+.mk.X{color:var(--x)} .mk.O{color:var(--o)}
+.pname{font:600 13px var(--f-cond);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side.on .pname{color:var(--ink)}
+.side.on .pname::after{content:" · am Zug";color:var(--accent)}
+.nums{font:700 26px var(--f-cond);font-variant-numeric:tabular-nums;letter-spacing:.02em;text-align:center}
+.nums small{font-size:12px;color:var(--muted);display:block;font-weight:600;letter-spacing:.05em}
+.online{background:var(--board);border:2px dashed var(--accent);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.online.ok{border-style:solid;border-color:var(--line);padding:10px 14px}
+.online .st{font-weight:600}
+.online .note{font-size:13px;color:var(--muted)}
+.linkrow{display:flex;gap:8px}
+.linkrow input{flex:1 1 0;width:0;min-width:0;font:500 14px var(--f-body);padding:9px 11px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--muted);margin-right:7px;vertical-align:1px}
+.dot.live{background:var(--good)}
+.ticker{min-height:22px;font-size:14px;color:var(--muted)}
+.ticker b{color:var(--ink)}
+.board{background:var(--board);border:2px solid var(--line);border-radius:16px;padding:8px;
+  background-image:radial-gradient(circle at 62.5% 62.5%,transparent 0 22%,var(--soft) 22% 22.6%,transparent 22.6%)}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.head{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;padding:6px 2px;min-height:64px;min-width:0}
+.hl{font:700 13px/1.1 var(--f-cond);letter-spacing:.02em;text-transform:uppercase;-webkit-hyphens:auto;hyphens:auto;overflow-wrap:break-word;max-width:100%}
+@media (max-width:420px){.hl{font-size:12px;letter-spacing:0}}
+.ht{font:500 11px/1.1 var(--f-cond);color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.corner{display:flex;align-items:center;justify-content:center}
+.corner .mk{font-size:36px}
+.chip{width:24px;height:24px;border-radius:50%;flex:none;border:1.5px solid var(--line)}
+.chip.flag{border-radius:3px;width:30px;height:20px}
+.chip.cup{border:0;width:24px;height:24px;color:var(--accent)}
+.cell{aspect-ratio:1;max-width:100%;border:2px solid var(--line);border-radius:10px;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;position:relative;padding:4px;min-width:0;color:var(--ink);font:inherit;transition:border-color .15s}
+.cell:hover:not([disabled]){border-color:var(--accent)}
+.cell.sel{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+.cell[disabled]{cursor:default}
+.cell .cnt{position:absolute;top:4px;right:6px;font:600 11px var(--f-cond);color:var(--muted);font-variant-numeric:tabular-nums}
+.cell .big{font-family:var(--f-display);font-size:clamp(30px,10vw,46px);line-height:1}
+.cell .big.X{color:var(--x)} .cell .big.O{color:var(--o)}
+.cell .who{font:600 11px/1.1 var(--f-cond);text-align:center;letter-spacing:.02em;overflow-wrap:anywhere;max-width:100%}
+.cell .plus{font:600 22px var(--f-cond);color:var(--line)}
+.cell.win{background:var(--win)}
+.cell.revealed{border-style:dashed;background:var(--soft)}
+.cell .rtag{font:600 10px var(--f-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.cell .who.rev{font-size:12px;color:var(--ink);margin-top:3px}
+.cell .none{font:600 12px var(--f-cond);color:var(--muted)}
+.cell.ask{border-style:dashed;border-color:var(--accent)}
+.panel{background:var(--board);border:2px solid var(--accent);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.pq{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;font:700 15px var(--f-cond);letter-spacing:.03em;text-transform:uppercase}
+.pq .times{color:var(--muted);font-weight:500}
+.field{display:flex;gap:8px}
+.field input{flex:1 1 0;width:0;min-width:0;font:500 16px var(--f-body);padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink)}
+.sugg{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.sugg button{font:500 14px var(--f-body);border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:6px 11px;cursor:pointer}
+.sugg button.used{opacity:.45;text-decoration:line-through}
+.sugg button.pick{border-color:var(--accent);background:var(--soft)}
+.verdict{font-size:14px;display:flex;flex-direction:column;gap:8px}
+.verdict:empty{display:none}
+.verdict .bad{color:var(--bad);font-weight:600}
+.verdict .facts{color:var(--muted);font-size:13px}
+.row-btns{display:flex;flex-wrap:wrap;gap:8px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+label.tog{display:inline-flex;gap:6px;align-items:center;font:600 13px var(--f-cond);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);cursor:pointer;margin-left:auto}
+.end{background:var(--board);border:1.5px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.end h2{font-family:var(--f-display);font-weight:400;font-size:24px;margin:0}
+.end .note{font-size:13px;color:var(--muted)}
+.sol{display:flex;flex-direction:column;gap:8px;font-size:14px}
+.sol b{font:700 13px var(--f-cond);letter-spacing:.03em;text-transform:uppercase}
+.sol span{color:var(--muted)}
+details{background:var(--board);border:1.5px solid var(--line);border-radius:14px;padding:12px 14px}
+summary{font:700 14px var(--f-cond);letter-spacing:.05em;text-transform:uppercase;cursor:pointer}
+details li,details p{font-size:14px;max-width:65ch}
+details ul{padding-left:18px;margin:6px 0}
+.note{font-size:12.5px;color:var(--muted)}
+.clock{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;background:var(--board);border:1.5px solid var(--line);border-radius:12px;padding:8px 12px}
+.clock-who{display:flex;align-items:center;gap:6px;font:600 13px var(--f-cond);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);white-space:nowrap;min-width:0}
+.clock-who b{font-family:var(--f-display);font-weight:400;font-size:20px;line-height:1}
+.clock-who b.X{color:var(--x)} .clock-who b.O{color:var(--o)}
+.clock-bar{height:8px;border-radius:99px;background:var(--soft);overflow:hidden}
+.clock-bar span{display:block;height:100%;width:100%;border-radius:inherit;background:var(--x);transform-origin:left center;transition:transform .25s linear}
+.clock.O .clock-bar span{background:var(--o)}
+.clock-num{font:700 22px/1 var(--f-cond);font-variant-numeric:tabular-nums;min-width:3.2ch;text-align:right}
+.clock.low .clock-num{color:var(--bad)}
+.clock.low .clock-bar span{background:var(--bad)}
+@keyframes clockpulse{50%{opacity:.35}}
+.clock.crit .clock-num{animation:clockpulse 1s steps(2,jump-none) infinite}
+.ptop{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pclock{font:700 16px var(--f-cond);font-variant-numeric:tabular-nums;color:var(--muted);flex:none}
+.pclock.low{color:var(--bad)}
+.coinlayer{position:fixed;inset:0;z-index:30;display:grid;place-items:center;padding:16px;background:color-mix(in srgb,var(--bg) 86%,transparent);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.coinbox{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;background:var(--board);border:2px solid var(--line);border-radius:20px;padding:22px 26px 20px;width:min(320px,100%);box-shadow:0 20px 50px -24px rgba(0,0,0,.45)}
+.coinkick{margin:0;font:700 13px var(--f-cond);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.coinstage{width:140px;height:140px;display:grid;place-items:center;perspective:700px}
+.coin{width:120px;height:120px;position:relative;transform-style:preserve-3d}
+.coin .face{position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;-webkit-backface-visibility:hidden;backface-visibility:hidden;font:400 64px/1 var(--f-display);padding-top:6px;background:radial-gradient(circle at 34% 28%,var(--coinhi),var(--coin) 60%,var(--coinrim));box-shadow:inset 0 0 0 5px var(--coinrim),inset 0 0 0 9px var(--coinhi)}
+.coin .fx{color:var(--coinx)}
+.coin .fo{color:var(--coino);transform:rotateX(180deg)}
+.coinmsg{margin:0;font:700 24px/1.15 var(--f-cond);letter-spacing:.02em;text-transform:uppercase;min-height:1.2em;text-wrap:balance}
+.coinmsg b{font:400 30px/1 var(--f-display);margin-right:4px}
+.coinmsg b.X{color:var(--x)} .coinmsg b.O{color:var(--o)}
+.coinsub{margin:0;font-size:13px;color:var(--muted);min-height:1.3em}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}.clock.crit .clock-num{animation:none}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <!-- ===== Menü ===== -->
+  <section id="menu" class="wrap" style="gap:16px">
+    <header>
+      <h1>Fußball-Tic-Tac-Toe <span class="x">X</span><span class="o">O</span></h1>
+      <p class="sub">Nenne Spieler, die zu Verein, Nation oder Titel aus Zeile und Spalte passen. Drei in einer Reihe gewinnt.</p>
+    </header>
+    <div class="diffrow">
+      <span class="lbl">Schwierigkeit</span>
+      <div class="seg" role="group" aria-label="Schwierigkeit">
+        <button data-d="0" aria-pressed="false">Leicht</button>
+        <button data-d="1" aria-pressed="true">Mittel</button>
+        <button data-d="2" aria-pressed="false">Schwer</button>
+      </div>
+    </div>
+    <div class="diffrow">
+      <span class="lbl">Zeit pro Zug</span>
+      <div class="seg" role="group" aria-label="Zeit pro Zug">
+        <button data-t="45" aria-pressed="true">45 Sek.</button>
+        <button data-t="0" aria-pressed="false">Ohne Limit</button>
+      </div>
+    </div>
+    <div class="modes">
+      <button class="mode primary" id="goFriend"><span class="ic"><span class="x">X</span><span class="o">O</span></span><span><b>Gegen einen Freund</b><span class="d">Du bekommst einen Link. Dein Freund öffnet ihn auf seinem Handy.</span></span><span class="go">›</span></button>
+      <button class="mode" id="goCpu"><span class="ic"><span class="x">X</span></span><span><b>Gegen den Computer</b><span class="d">Du spielst X, der Computer O.</span></span><span class="go">›</span></button>
+      <button class="mode" id="goLocal"><span class="ic"><span class="o">O</span></span><span><b>Zu zweit an einem Handy</b><span class="d">Nach jedem Zug weitergeben.</span></span><span class="go">›</span></button>
+    </div>
+    <details>
+      <summary>Regeln & Kategorien</summary>
+      <ul>
+        <li>Abwechselnd ein freies Feld wählen und einen Spieler nennen, der zu beiden Kategorien passt.</li>
+        <li>Richtig: Feld gehört dir. Falsch: dein Zug ist vorbei, ein zweiter Versuch ist nicht möglich. Jeder Spieler darf pro Runde nur einmal genannt werden, sonst zählt der Tipp als falsch.</li>
+        <li>Verein = mindestens ein Pflichtspiel für die erste Mannschaft (Leihen zählen). Nation = A-Nationalspieler.</li>
+        <li>Titel zählen, wenn der Spieler zum Kader der Sieger gehörte. „CL-Sieger“ schließt den Europapokal der Landesmeister ein, „EL-Sieger“ den UEFA-Pokal.</li>
+        <li>Die Zahl oben rechts im Feld zeigt, wie viele passende Spieler die Datenbank kennt.</li>
+        <li>Bei Tippfehlern schlägt das Spiel ähnliche Namen vor. Kennt die Datenbank einen Spieler nicht, entscheidet der Gegner. Bei einem Fehler der Datenbank gibt es „Einspruch“.</li>
+        <li>Kennt keiner mehr einen Spieler, kann man „Auflösen“ anfragen. Stimmt der Gegner zu, endet die Runde als Remis und jedes freie Feld zeigt einen passenden Spieler. Jeder darf pro Runde einmal fragen.</li>
+        <li>Vor dem ersten Spiel entscheidet ein Münzwurf, wer beginnt. Danach beginnen die Spieler abwechselnd.</li>
+        <li>Mit Zeitlimit hast du 45 Sekunden pro Zug. Läuft die Uhr ab, ist der Gegner dran. Während über einen unbekannten Spieler entschieden wird, steht die Uhr.</li>
+      </ul>
+      <p class="note dbnote"></p>
+    </details>
+  </section>
+
+  <!-- ===== Spiel ===== -->
+  <section id="game" class="wrap" hidden>
+    <div class="coinlayer" id="coinlayer" hidden>
+      <div class="coinbox" role="status" aria-live="polite">
+        <p class="coinkick">Münzwurf</p>
+        <div class="coinstage" id="coinstage"><div class="coin" id="coin"><div class="face fx">X</div><div class="face fo">O</div></div></div>
+        <p class="coinmsg" id="coinMsg">Wer beginnt?</p>
+        <p class="coinsub" id="coinSub"></p>
+      </div>
+    </div>
+    <div class="topbar">
+      <button class="btn ghost small" id="toMenu" type="button">‹ Menü</button>
+      <span class="t" id="modeLabel"></span>
+    </div>
+
+    <div class="score">
+      <div class="side" id="sX"><span class="mk X">X</span><span class="pname" id="nX"></span></div>
+      <div class="nums"><span id="score">0 : 0</span><small id="draws">0 Remis</small></div>
+      <div class="side r" id="sO"><span class="pname" id="nO"></span><span class="mk O">O</span></div>
+    </div>
+
+    <section class="online" id="online" hidden>
+      <div class="st" id="onStatus"></div>
+      <div class="linkrow" id="linkRow">
+        <input id="linkInput" type="text" readonly aria-label="Einladungslink">
+        <button class="btn small" id="copy" type="button">Link kopieren</button>
+      </div>
+      <div class="note" id="onNote"></div>
+    </section>
+
+    <div class="clock" id="clock" hidden>
+      <span class="clock-who" id="clockWho"></span>
+      <div class="clock-bar" aria-hidden="true"><span id="clockFill"></span></div>
+      <span class="clock-num" id="clockNum">0:45</span>
+    </div>
+
+    <div class="ticker" id="ticker"></div>
+
+    <div class="board"><div class="grid" id="grid"></div></div>
+
+    <section class="panel" id="panel" hidden>
+      <div class="ptop"><div class="pq" id="pq"></div><span class="pclock" id="pClock" aria-label="Restzeit"></span></div>
+      <form class="field" id="form" autocomplete="off">
+        <input id="answer" type="text" placeholder="Spielername …" aria-label="Spielername" autocapitalize="words" spellcheck="false">
+        <button class="btn" type="submit">Prüfen</button>
+      </form>
+      <ul class="sugg" id="sugg"></ul>
+      <div class="verdict" id="verdict"></div>
+      <div class="row-btns" id="cancelRow"><button class="btn ghost small" id="cancel" type="button">Abbrechen</button></div>
+    </section>
+
+    <section class="end" id="end" hidden>
+      <h2 id="endTitle"></h2>
+      <div class="row-btns">
+        <button class="btn" id="next" type="button">Nächste Runde</button>
+        <button class="btn ghost" id="showSol" type="button">Lösungen zeigen</button>
+      </div>
+      <div class="note" id="endNote"></div>
+      <div class="sol" id="sol" hidden></div>
+    </section>
+
+    <div class="actions" id="actions">
+      <button class="btn ghost small" id="pass" type="button">Passen</button>
+      <button class="btn ghost small" id="reveal" type="button">Auflösen</button>
+      <button class="btn ghost small" id="newgrid" type="button">Neues Raster</button>
+      <label class="tog"><input type="checkbox" id="showCnt" checked> Trefferzahl</label>
+    </div>
+  </section>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+// ---------- Kategorien ----------
+const CATS = {
+  FCB:['club','Bayern','FC Bayern München','#dc052d','#ffffff'],
+  BVB:['club','Dortmund','Borussia Dortmund','#fde100','#111111'],
+  B04:['club','Leverkusen','Bayer 04 Leverkusen','#e32221','#111111'],
+  RBL:['club','Leipzig','RB Leipzig','#ffffff','#dd0741'],
+  S04:['club','Schalke','FC Schalke 04','#004d9d','#ffffff'],
+  WOB:['club','Wolfsburg','VfL Wolfsburg','#65b32e','#ffffff'],
+  BMG:['club','Gladbach','Borussia Mönchengladbach','#111111','#1fa14b'],
+  VFB:['club','Stuttgart','VfB Stuttgart','#ffffff','#e32219'],
+  SGE:['club','Frankfurt','Eintracht Frankfurt','#111111','#e1000f'],
+  RMA:['club','Real Madrid','Real Madrid','#ffffff','#febe10'],
+  FCBA:['club','Barcelona','FC Barcelona','#004d98','#a50044'],
+  ATM:['club','Atlético','Atlético Madrid','#cb3524','#ffffff'],
+  SEV:['club','Sevilla','FC Sevilla','#ffffff','#d71920'],
+  VAL:['club','Valencia','FC Valencia','#111111','#f39200'],
+  MUN:['club','Man United','Manchester United','#da291c','#111111'],
+  MCI:['club','Man City','Manchester City','#6cabdd','#ffffff'],
+  LIV:['club','Liverpool','FC Liverpool','#c8102e','#00b2a9'],
+  CHE:['club','Chelsea','FC Chelsea','#034694','#ffffff'],
+  ARS:['club','Arsenal','FC Arsenal','#ef0107','#ffffff'],
+  TOT:['club','Tottenham','Tottenham Hotspur','#ffffff','#132257'],
+  JUV:['club','Juventus','Juventus Turin','#111111','#ffffff'],
+  INT:['club','Inter','Inter Mailand','#0068a8','#111111'],
+  MIL:['club','Milan','AC Mailand','#fb090b','#111111'],
+  NAP:['club','Neapel','SSC Neapel','#12a0d7','#ffffff'],
+  ROM:['club','AS Rom','AS Rom','#8e1f2f','#f0bc42'],
+  PSG:['club','Paris SG','Paris Saint-Germain','#004170','#da291c'],
+  MON:['club','Monaco','AS Monaco','#e51b22','#ffffff'],
+  OL:['club','Lyon','Olympique Lyon','#ffffff','#1a3e8c'],
+  OM:['club','Marseille','Olympique Marseille','#ffffff','#2faee0'],
+  GER:['nat','Deutschland','Nationalspieler Deutschland'],
+  FRA:['nat','Frankreich','Nationalspieler Frankreich'],
+  ESP:['nat','Spanien','Nationalspieler Spanien'],
+  ENG:['nat','England','Nationalspieler England'],
+  ITA:['nat','Italien','Nationalspieler Italien'],
+  BRA:['nat','Brasilien','Nationalspieler Brasilien'],
+  ARG:['nat','Argentinien','Nationalspieler Argentinien'],
+  POR:['nat','Portugal','Nationalspieler Portugal'],
+  NED:['nat','Niederlande','Nationalspieler Niederlande'],
+  BEL:['nat','Belgien','Nationalspieler Belgien'],
+  CL:['title','CL-Sieger','Champions League / Landesmeister-Pokal gewonnen'],
+  EL:['title','EL-Sieger','Europa League / UEFA-Pokal gewonnen'],
+  WM:['title','Weltmeister','Weltmeister geworden'],
+  EM:['title','Europameister','Europameister geworden'],
+  CA:['title','Copa América','Copa América gewonnen'],
+  BDO:['title','Ballon d\'Or','Ballon d\'Or gewonnen'],
+  MDE:['title','Dt. Meister','Deutscher Meister'],
+  MEN:['title','Engl. Meister','Englischer Meister'],
+  MES:['title','Span. Meister','Spanischer Meister'],
+  MIT:['title','Ital. Meister','Italienischer Meister'],
+  MFR:['title','Franz. Meister','Französischer Meister'],
+};
+const FLAGS = {
+  GER:'linear-gradient(#000 0 33.3%,#dd0000 33.3% 66.6%,#ffce00 66.6%)',
+  FRA:'linear-gradient(90deg,#0055a4 0 33.3%,#fff 33.3% 66.6%,#ef4135 66.6%)',
+  ESP:'linear-gradient(#aa151b 0 25%,#f1bf00 25% 75%,#aa151b 75%)',
+  ENG:'linear-gradient(90deg,transparent 43%,#ce1124 43% 57%,transparent 57%),linear-gradient(transparent 38%,#ce1124 38% 62%,transparent 62%),#fff',
+  ITA:'linear-gradient(90deg,#009246 0 33.3%,#fff 33.3% 66.6%,#ce2b37 66.6%)',
+  BRA:'radial-gradient(circle at 50% 50%,#002776 0 20%,transparent 21%),conic-gradient(from 45deg,#009c3b 0 0) ,linear-gradient(#009c3b,#009c3b)',
+  ARG:'linear-gradient(#74acdf 0 33.3%,#fff 33.3% 66.6%,#74acdf 66.6%)',
+  POR:'linear-gradient(90deg,#006600 0 40%,#ff0000 40%)',
+  NED:'linear-gradient(#ae1c28 0 33.3%,#fff 33.3% 66.6%,#21468b 66.6%)',
+  BEL:'linear-gradient(90deg,#000 0 33.3%,#fdda24 33.3% 66.6%,#ef3340 66.6%)',
+};
+const NATNAME = {IRN:'Iran',PAR:'Paraguay',RSA:'Südafrika',ZIM:'Simbabwe',ISR:'Israel',UZB:'Usbekistan',KOS:'Kosovo',PER:'Peru',JPN:'Japan',BLR:'Belarus',MEX:'Mexiko',BUL:'Bulgarien',BFA:'Burkina Faso',FIN:'Finnland',MLI:'Mali',ROU:'Rumänien',TOG:'Togo',CRC:'Costa Rica',MNE:'Montenegro',IRL:'Irland',NIR:'Nordirland',TRI:'Trinidad und Tobago',LBR:'Liberia',MKD:'Nordmazedonien',AUS:'Australien',ISL:'Island',RUS:'Russland',GRE:'Griechenland',SVK:'Slowakei',TUN:'Tunesien',VEN:'Venezuela',JAM:'Jamaika',WAL:'Wales',ECU:'Ecuador',ARM:'Armenien',GHA:'Ghana',GER:'Deutschland',FRA:'Frankreich',ESP:'Spanien',ENG:'England',ITA:'Italien',BRA:'Brasilien',ARG:'Argentinien',POR:'Portugal',NED:'Niederlande',BEL:'Belgien',
+  AUT:'Österreich',CRO:'Kroatien',POL:'Polen',SWE:'Schweden',NOR:'Norwegen',EGY:'Ägypten',SEN:'Senegal',KOR:'Südkorea',URU:'Uruguay',NGA:'Nigeria',GEO:'Georgien',MAR:'Marokko',
+  GAB:'Gabun',ALG:'Algerien',CMR:'Kamerun',CIV:'Elfenbeinküste',USA:'USA',CAN:'Kanada',CHI:'Chile',COL:'Kolumbien',WAL:'Wales',SUI:'Schweiz',BIH:'Bosnien-Herz.',TUR:'Türkei',
+  SRB:'Serbien',HUN:'Ungarn',SVN:'Slowenien',GUI:'Guinea',CZE:'Tschechien',UKR:'Ukraine',DEN:'Dänemark',SCO:'Schottland'};
+
+// ---------- Spielerdatenbank (Name|Nation|Vereine|Titel|Alias) ----------
+
+const RAW = `Thomas Müller|GER|FCB|CL WM MDE
+Manuel Neuer|GER|S04 FCB|CL WM MDE
+Toni Kroos|GER|FCB B04 RMA|CL WM MDE MES
+Joshua Kimmich|GER|RBL FCB|CL MDE
+Leon Goretzka|GER|S04 FCB|CL MDE
+Leroy Sané|GER|S04 MCI FCB|MEN MDE
+Serge Gnabry|GER|ARS FCB|CL MDE
+Jamal Musiala|GER|FCB|MDE
+Florian Wirtz|GER|B04 LIV|MDE
+Kai Havertz|GER|B04 CHE ARS|CL MEN
+Marco Reus|GER|BMG BVB|
+Mats Hummels|GER|FCB BVB ROM|WM MDE
+Jérôme Boateng|GER|MCI FCB OL|CL WM MDE
+Mario Götze|GER|BVB FCB SGE|WM MDE
+Philipp Lahm|GER|VFB FCB|CL WM MDE
+Bastian Schweinsteiger|GER|FCB MUN|CL WM MDE
+Miroslav Klose|GER|FCB|WM MDE
+Mesut Özil|GER|S04 RMA ARS|WM MES
+Ilkay Gündogan|GER|BVB MCI FCBA|CL MEN MDE|İlkay Gündoğan
+Antonio Rüdiger|GER|VFB ROM CHE RMA|CL EL MES
+Marc-André ter Stegen|GER|BMG FCBA|CL MES
+Timo Werner|GER|VFB RBL CHE TOT|CL
+Sami Khedira|GER|VFB RMA JUV|CL WM MES MIT MDE
+Per Mertesacker|GER|ARS|WM
+Lukas Podolski|GER|FCB ARS INT|WM MDE
+André Schürrle|GER|B04 CHE WOB BVB|WM
+Julian Draxler|GER|S04 WOB PSG|WM MFR
+Benedikt Höwedes|GER|S04 JUV|WM MIT
+Christoph Kramer|GER|B04 BMG|WM
+Shkodran Mustafi|GER|VAL ARS S04|WM
+Matthias Ginter|GER|BVB BMG|WM
+Kevin Großkreutz|GER|BVB VFB|WM MDE
+Roman Weidenfeller|GER|BVB|WM MDE
+Erik Durm|GER|BVB SGE|WM
+Michael Ballack|GER|FCB B04 CHE|MDE MEN
+Oliver Kahn|GER|FCB|CL MDE
+Jürgen Klinsmann|GER|VFB INT MON TOT FCB|WM EM MDE EL
+Lothar Matthäus|GER|BMG FCB INT|WM EM BDO MDE MIT EL
+Mario Gomez|GER|VFB FCB WOB|CL MDE|Mario Gómez
+Emre Can|GER|FCB B04 LIV JUV BVB|MIT
+Thilo Kehrer|GER|S04 PSG MON|MFR
+Nico Schlotterbeck|GER|BVB|
+Jonathan Tah|GER|B04 FCB|MDE
+Aleksandar Pavlović|GER|FCB|MDE
+Julian Brandt|GER|B04 BVB|
+Niclas Füllkrug|GER|BVB|
+Robert Andrich|GER|B04|MDE
+Kevin Trapp|GER|SGE PSG|MFR EL
+Bernd Leno|GER|B04 ARS|
+David Alaba|AUT|FCB RMA|CL MDE MES
+Marcel Sabitzer|AUT|RBL FCB MUN BVB|MDE
+Dayot Upamecano|FRA|RBL FCB|MDE
+Kingsley Coman|FRA|PSG JUV FCB|CL MFR MIT MDE
+Benjamin Pavard|FRA|VFB FCB INT|WM CL MDE MIT
+Lucas Hernández|FRA|ATM FCB PSG|WM CL EL MDE MFR
+Corentin Tolisso|FRA|OL FCB|WM MDE
+Franck Ribéry|FRA|OM FCB|CL MDE
+Kylian Mbappé|FRA|MON PSG RMA|WM MFR
+Antoine Griezmann|FRA|ATM FCBA|WM EL
+Karim Benzema|FRA|OL RMA|CL MES MFR BDO
+Paul Pogba|FRA|MUN JUV MON|WM MIT EL
+N'Golo Kanté|FRA|CHE|WM CL MEN EL
+Hugo Lloris|FRA|OL TOT|WM
+Raphaël Varane|FRA|RMA MUN|WM CL MES
+Olivier Giroud|FRA|ARS CHE MIL|WM CL EL MIT MFR
+Ousmane Dembélé|FRA|BVB FCBA PSG|WM CL MES MFR BDO
+Thierry Henry|FRA|MON JUV ARS FCBA|WM EM CL MEN MES MFR
+Zinedine Zidane|FRA|JUV RMA|WM EM CL MIT MES BDO|Zizou
+Patrick Vieira|FRA|MIL ARS JUV INT MCI|WM EM MEN MIT
+Didier Deschamps|FRA|OM JUV CHE VAL|WM EM CL MFR MIT
+Blaise Matuidi|FRA|PSG JUV|WM MFR MIT
+Adrien Rabiot|FRA|PSG JUV OM MIL|MFR MIT
+Aurélien Tchouaméni|FRA|MON RMA|CL MES
+Eduardo Camavinga|FRA|RMA|CL MES
+Theo Hernández|FRA|RMA MIL|CL MIT
+William Saliba|FRA|ARS OM|MEN
+Mike Maignan|FRA|MIL|MIT MFR
+Marcus Thuram|FRA|BMG INT|MIT
+Randal Kolo Muani|FRA|PSG JUV SGE TOT|MFR
+Jules Koundé|FRA|SEV FCBA|EL MES
+Ibrahima Konaté|FRA|RBL LIV RMA|MEN
+Lilian Thuram|FRA|MON JUV FCBA|WM EM MIT EL
+Claude Makélélé|FRA|OM RMA CHE PSG|CL MES MEN MFR
+Eric Abidal|FRA|MON OL FCBA|CL MES MFR
+Samir Nasri|FRA|OM ARS MCI SEV|MEN
+Samuel Umtiti|FRA|OL FCBA|WM MES
+Presnel Kimpembe|FRA|PSG|WM MFR
+Florian Thauvin|FRA|OM|WM
+Nabil Fekir|FRA|OL|WM
+Thomas Lemar|FRA|MON ATM|WM MFR MES
+Benjamin Mendy|FRA|OM MON MCI|WM MFR MEN
+Tiémoué Bakayoko|FRA|MON CHE MIL|MFR MIT
+Alexandre Lacazette|FRA|OL ARS|
+Rayan Cherki|FRA|OL MCI|
+Hugo Ekitiké|FRA|PSG SGE LIV|MFR
+Christopher Nkunku|FRA|PSG RBL CHE MIL|MFR
+Kevin Gameiro|FRA|PSG SEV ATM VAL|EL MFR
+Robert Pires|FRA|OM ARS|WM EM MEN
+Michael Olise|FRA|FCB|MDE
+Désiré Doué|FRA|PSG|CL MFR
+Bradley Barcola|FRA|OL PSG LIV|CL MFR
+Sergio Ramos|ESP|SEV RMA PSG|WM EM CL MES MFR
+Andrés Iniesta|ESP|FCBA|WM EM CL MES
+Xavi|ESP|FCBA|WM EM CL MES|Xavi Hernández
+Iker Casillas|ESP|RMA|WM EM CL MES
+Gerard Piqué|ESP|MUN FCBA|WM EM CL MES MEN
+Carles Puyol|ESP|FCBA|WM EM CL MES
+David Villa|ESP|VAL FCBA ATM|WM EM CL MES
+Fernando Torres|ESP|ATM LIV CHE MIL|WM EM CL EL
+Cesc Fàbregas|ESP|ARS FCBA CHE MON|WM EM MES MEN
+Xabi Alonso|ESP|LIV RMA FCB|WM EM CL MDE
+David Silva|ESP|VAL MCI|WM EM MEN
+Juan Mata|ESP|VAL CHE MUN|WM EM CL EL
+Pedro|ESP|FCBA CHE ROM|WM EM CL MES MEN EL|Pedro Rodríguez
+Jordi Alba|ESP|VAL FCBA|EM CL MES
+Sergio Busquets|ESP|FCBA|WM EM CL MES
+Thiago Alcântara|ESP|FCBA FCB LIV|CL MES MDE MEN|Thiago
+Álvaro Morata|ESP|RMA JUV CHE ATM MIL|EM CL MES MIT
+Rodri|ESP|ATM MCI FCBA|EM CL MEN BDO WM|Rodrigo Hernández
+Pedri|ESP|FCBA|EM MES WM
+Gavi|ESP|FCBA|MES WM
+Lamine Yamal|ESP|FCBA|EM MES WM
+Dani Carvajal|ESP|B04 RMA|EM CL MES
+Dani Olmo|ESP|RBL FCBA|EM MES WM
+Álvaro Arbeloa|ESP|LIV RMA|WM EM CL MES
+Raúl|ESP|RMA S04|CL MES|Raúl González
+Isco|ESP|VAL RMA SEV|CL MES
+Marco Asensio|ESP|RMA PSG|CL MES MFR
+Saúl Ñíguez|ESP|ATM CHE SEV|EL MES|Saul
+Koke|ESP|ATM|EL MES
+Diego Costa|ESP|ATM CHE|MES MEN
+Jesús Navas|ESP|SEV MCI|WM EM MEN EL
+Ferran Torres|ESP|VAL MCI FCBA PSG|EM MES WM
+Lucas Vázquez|ESP|RMA B04|CL MES
+Javi Martínez|ESP|FCB|WM EM CL MDE
+Pepe Reina|ESP|FCBA LIV NAP FCB MIL|WM EM MDE
+Raúl Albiol|ESP|VAL RMA NAP|WM EM MES EL
+Aymeric Laporte|ESP|MCI|EM MEN WM
+Mikel Merino|ESP|BVB ARS|EM MEN WM
+Fabián Ruiz|ESP|NAP PSG|EM CL MFR WM
+Martín Zubimendi|ESP|ARS|EM MEN WM
+Alejandro Grimaldo|ESP|B04 ATM|EM MDE WM
+Mikel Arteta|ESP|PSG ARS|
+Wayne Rooney|ENG|MUN|CL MEN EL
+Steven Gerrard|ENG|LIV|CL EL
+Frank Lampard|ENG|CHE MCI|CL MEN EL
+John Terry|ENG|CHE|CL MEN EL
+David Beckham|ENG|MUN RMA MIL PSG|CL MEN MES MFR
+Harry Kane|ENG|TOT FCB|MDE BDO
+Jude Bellingham|ENG|BVB RMA|CL MES
+Jadon Sancho|ENG|BVB MUN CHE|EL
+Raheem Sterling|ENG|LIV MCI CHE ARS|MEN
+Kyle Walker|ENG|TOT MCI MIL|CL MEN
+John Stones|ENG|MCI INT|CL MEN
+Phil Foden|ENG|MCI|CL MEN
+Declan Rice|ENG|ARS|MEN
+Bukayo Saka|ENG|ARS|MEN
+Trent Alexander-Arnold|ENG|LIV RMA|CL MEN
+Jordan Henderson|ENG|LIV CHE|CL MEN
+Kieran Trippier|ENG|TOT ATM|MES
+Eric Dier|ENG|TOT FCB MON|MDE
+Ashley Cole|ENG|ARS CHE ROM|CL MEN
+Rio Ferdinand|ENG|MUN|CL MEN
+Paul Scholes|ENG|MUN|CL MEN
+Michael Owen|ENG|LIV RMA MUN|BDO MEN EL
+Steve McManaman|ENG|LIV RMA MCI|CL MES
+Owen Hargreaves|ENG|FCB MUN MCI|CL MDE MEN
+Fikayo Tomori|ENG|CHE MIL|MIT
+Chris Smalling|ENG|MUN ROM|EL MEN
+Mason Mount|ENG|CHE MUN|CL
+Cole Palmer|ENG|MCI CHE|CL MEN
+Jack Grealish|ENG|MCI|CL MEN
+Marcus Rashford|ENG|MUN FCBA|EL MES
+Daniel Sturridge|ENG|MCI CHE LIV|CL
+Jamie Carragher|ENG|LIV|CL EL
+Sol Campbell|ENG|TOT ARS|MEN
+Gianluigi Buffon|ITA|JUV PSG|WM MIT EL
+Andrea Pirlo|ITA|INT MIL JUV|WM CL MIT
+Francesco Totti|ITA|ROM|WM MIT
+Paolo Maldini|ITA|MIL|CL MIT
+Fabio Cannavaro|ITA|NAP INT JUV RMA|WM BDO MES EL
+Alessandro Del Piero|ITA|JUV|WM CL MIT
+Daniele De Rossi|ITA|ROM|WM
+Giorgio Chiellini|ITA|JUV|EM MIT
+Leonardo Bonucci|ITA|INT JUV MIL|EM MIT
+Gianluigi Donnarumma|ITA|MIL PSG MCI|EM CL MFR
+Marco Verratti|ITA|PSG|EM MFR
+Jorginho|ITA|NAP CHE ARS|EM CL EL
+Federico Chiesa|ITA|JUV LIV|EM MEN
+Ciro Immobile|ITA|JUV BVB SEV|EM
+Mario Balotelli|ITA|INT MCI MIL LIV OM|CL MIT MEN
+Alessandro Nesta|ITA|MIL|WM CL MIT
+Christian Vieri|ITA|JUV ATM INT MIL MON|MIT
+Nicolò Barella|ITA|INT|EM MIT
+Lorenzo Insigne|ITA|NAP|EM
+Gennaro Gattuso|ITA|MIL|WM CL MIT
+Filippo Inzaghi|ITA|JUV MIL|WM CL MIT|Pippo Inzaghi
+Roberto Baggio|ITA|JUV MIL INT|BDO MIT EL
+Sandro Tonali|ITA|MIL TOT|MIT
+Leonardo Spinazzola|ITA|JUV ROM|EM
+Alessandro Bastoni|ITA|INT|EM MIT
+Giovanni Di Lorenzo|ITA|NAP|EM MIT
+Manuel Locatelli|ITA|MIL JUV|EM
+Federico Bernardeschi|ITA|JUV|EM MIT
+Alessandro Florenzi|ITA|ROM PSG MIL|EM MIT
+Emerson Palmieri|ITA|ROM CHE OL|EM CL EL
+Gianluca Zambrotta|ITA|JUV FCBA MIL|WM MIT
+Marco Materazzi|ITA|INT|WM CL MIT
+Luca Toni|ITA|FCB ROM JUV|WM MDE
+Andrea Barzagli|ITA|WOB JUV|WM MDE MIT
+Neymar|BRA|FCBA PSG|CL MES MFR|Neymar Jr
+Ronaldinho|BRA|PSG FCBA MIL|WM CA BDO CL MES MIT
+Ronaldo Nazário|BRA|FCBA INT RMA MIL|WM CA BDO MES EL|Ronaldo R9
+Kaká|BRA|MIL RMA|WM CL BDO MIT MES
+Roberto Carlos|BRA|INT RMA|WM CA CL MES
+Cafu|BRA|ROM MIL|WM CA CL MIT
+Rivaldo|BRA|FCBA MIL|WM CA BDO CL MES
+Dani Alves|BRA|SEV FCBA JUV PSG|CA CL EL MES MIT MFR|Daniel Alves
+Marcelo|BRA|RMA|CL MES
+Casemiro|BRA|RMA MUN|CA CL MES
+Vinícius Júnior|BRA|RMA|CL MES|Vini Jr
+Rodrygo|BRA|RMA|CL MES
+Thiago Silva|BRA|MIL PSG CHE|CA CL MIT MFR
+Marquinhos|BRA|ROM PSG|CA CL MFR
+Alisson|BRA|ROM LIV|CA CL MEN|Alisson Becker
+Fabinho|BRA|MON LIV|CA CL MEN MFR
+Roberto Firmino|BRA|LIV|CA CL MEN
+Philippe Coutinho|BRA|INT LIV FCBA FCB|CA CL MES MDE
+Ederson|BRA|MCI|CA CL MEN
+Gabriel Jesus|BRA|MCI ARS FCBA|CA MEN
+Raphinha|BRA|FCBA|MES
+Lúcio|BRA|B04 FCB INT JUV|WM CL MDE MIT
+Adriano|BRA|INT|CA MIT
+Willian|BRA|CHE ARS|CA MEN EL
+Douglas Costa|BRA|FCB JUV|MDE MIT
+Oscar|BRA|CHE|MEN EL
+Lucas Paquetá|BRA|MIL OL|CA
+Fernandinho|BRA|MCI|CA MEN EL
+Gabriel Martinelli|BRA|ARS|MEN
+David Luiz|BRA|CHE PSG ARS|CL EL MEN MFR
+Éder Militão|BRA|RMA|CA CL MES
+Gilberto Silva|BRA|ARS|WM CA MEN
+Juninho Pernambucano|BRA|OL|MFR
+Lionel Messi|ARG|FCBA PSG|WM CA CL BDO MES MFR|Leo Messi
+Ángel Di María|ARG|RMA MUN PSG JUV|WM CA CL MES MFR
+Sergio Agüero|ARG|ATM MCI FCBA|CA EL MEN|Kun Agüero
+Gonzalo Higuaín|ARG|RMA NAP JUV MIL CHE|EL MES MIT
+Javier Mascherano|ARG|LIV FCBA|CL MES
+Carlos Tevez|ARG|MUN MCI JUV|CL MEN MIT
+Javier Zanetti|ARG|INT|CL EL MIT
+Lautaro Martínez|ARG|INT|WM CA MIT
+Julián Álvarez|ARG|MCI ATM|WM CA CL MEN
+Enzo Fernández|ARG|CHE MCI|WM CA
+Alexis Mac Allister|ARG|LIV|WM CA MEN
+Emiliano Martínez|ARG|ARS CHE|WM CA EL|Dibu Martínez
+Rodrigo De Paul|ARG|VAL ATM|WM CA
+Paulo Dybala|ARG|JUV ROM|WM MIT
+Nicolás Otamendi|ARG|VAL MCI|WM CA MEN EL
+Cristian Romero|ARG|TOT ATM|WM CA EL|Cuti Romero
+Gabriel Batistuta|ARG|ROM INT|CA MIT
+Hernán Crespo|ARG|INT MIL CHE|EL MEN MIT
+Diego Simeone|ARG|ATM INT|CA EL MES MIT
+Diego Maradona|ARG|FCBA NAP SEV|WM EL MIT
+Leandro Paredes|ARG|ROM PSG JUV|WM CA MFR
+Gabriel Heinze|ARG|PSG MUN RMA OM ROM|MEN MES MFR
+Éver Banega|ARG|VAL ATM SEV INT|EL
+Cristiano Ronaldo|POR|MUN RMA JUV|EM CL BDO MEN MES MIT|CR7
+Luís Figo|POR|FCBA RMA INT|CL BDO MES MIT
+Pepe|POR|RMA|EM CL MES
+Bernardo Silva|POR|MON MCI RMA|CL MEN MFR
+Bruno Fernandes|POR|MUN|
+João Cancelo|POR|VAL JUV INT MCI FCB FCBA|MIT MEN MDE MES
+Rúben Dias|POR|MCI|CL MEN
+João Félix|POR|ATM CHE FCBA MIL|MES
+Rafael Leão|POR|MIL|MIT
+Nuno Mendes|POR|PSG|CL MFR
+Vitinha|POR|PSG|CL MFR
+João Neves|POR|PSG|CL MFR
+Diogo Jota|POR|LIV|MEN
+Ricardo Carvalho|POR|CHE RMA MON|EM CL MEN MES EL
+Deco|POR|FCBA CHE|CL MES MEN EL
+Nani|POR|MUN VAL|EM CL MEN
+João Moutinho|POR|MON|EM MFR EL
+Renato Sanches|POR|FCB PSG ROM|EM MDE MFR
+Raphaël Guerreiro|POR|BVB FCB|EM MDE
+Arjen Robben|NED|CHE RMA FCB|CL MEN MES MDE
+Robin van Persie|NED|ARS MUN|MEN EL
+Wesley Sneijder|NED|RMA INT|CL MES MIT
+Virgil van Dijk|NED|LIV|CL MEN
+Frenkie de Jong|NED|FCBA|MES
+Matthijs de Ligt|NED|JUV FCB MUN|MIT MDE
+Clarence Seedorf|NED|RMA INT MIL|CL MES MIT
+Edgar Davids|NED|MIL JUV FCBA INT TOT|CL MIT
+Ruud van Nistelrooy|NED|MUN RMA|MEN MES
+Rafael van der Vaart|NED|RMA TOT|
+Memphis Depay|NED|MUN OL FCBA ATM|
+Georginio Wijnaldum|NED|LIV PSG ROM|CL MEN MFR
+Denzel Dumfries|NED|INT RMA|MIT
+Cody Gakpo|NED|LIV|MEN
+Ryan Gravenberch|NED|FCB LIV|MDE MEN
+Marco van Basten|NED|MIL|EM BDO CL MIT
+Ruud Gullit|NED|MIL CHE|EM BDO CL MIT
+Patrick Kluivert|NED|MIL FCBA|CL MES
+Nathan Aké|NED|CHE MCI|CL MEN
+Xavi Simons|NED|PSG RBL TOT|
+Dennis Bergkamp|NED|INT ARS|EL MEN
+Klaas-Jan Huntelaar|NED|RMA MIL S04|
+Jeremie Frimpong|NED|B04 LIV|MDE
+Kevin De Bruyne|BEL|CHE WOB MCI NAP|CL MEN
+Eden Hazard|BEL|CHE RMA|CL EL MEN MES MFR
+Thibaut Courtois|BEL|ATM CHE RMA|CL EL MEN MES
+Romelu Lukaku|BEL|CHE MUN INT ROM NAP|MIT
+Vincent Kompany|BEL|MCI|MEN
+Dries Mertens|BEL|NAP|
+Axel Witsel|BEL|BVB ATM|
+Jan Vertonghen|BEL|TOT|
+Toby Alderweireld|BEL|ATM TOT|
+Leandro Trossard|BEL|ARS|MEN
+Thorgan Hazard|BEL|CHE BMG BVB|
+Jérémy Doku|BEL|MCI|
+Marouane Fellaini|BEL|MUN|EL
+Luka Modrić|CRO|TOT RMA MIL|CL BDO MES
+Ivan Rakitić|CRO|S04 SEV FCBA|CL EL MES
+Mario Mandžukić|CRO|WOB FCB ATM JUV MIL|CL MDE MIT
+Ivan Perišić|CRO|BVB WOB INT FCB TOT|CL MDE MIT
+Mateo Kovačić|CRO|INT RMA CHE MCI|CL EL MEN MES
+Joško Gvardiol|CRO|RBL MCI|MEN
+Ante Rebić|CRO|SGE MIL|MIT
+Robert Lewandowski|POL|BVB FCB FCBA|CL MDE MES
+Zlatan Ibrahimović|SWE|JUV INT FCBA MIL PSG MUN|EL MES MIT MFR
+Erling Haaland|NOR|BVB MCI|CL MEN
+Martin Ødegaard|NOR|RMA ARS|MEN
+Mohamed Salah|EGY|CHE ROM LIV|CL MEN
+Omar Marmoush|EGY|WOB SGE MCI TOT|
+Sadio Mané|SEN|LIV FCB|CL MEN MDE
+Kalidou Koulibaly|SEN|NAP CHE|
+Son Heung-min|KOR|B04 TOT|EL
+Kim Min-jae|KOR|NAP FCB|MIT MDE
+Luis Suárez|URU|LIV FCBA ATM|CA CL MES
+Edinson Cavani|URU|NAP PSG MUN VAL|CA MFR
+Federico Valverde|URU|RMA|CL MES
+Victor Osimhen|NGA|NAP|MIT
+Khvicha Kvaratskhelia|GEO|NAP PSG|CL MIT MFR|Kvara
+Achraf Hakimi|MAR|RMA BVB INT PSG|CL MIT MFR
+Pierre-Emerick Aubameyang|GAB|MON BVB ARS FCBA CHE OM|
+Riyad Mahrez|ALG|MCI|CL MEN
+Samuel Eto'o|CMR|RMA FCBA INT CHE|CL MES MIT
+Didier Drogba|CIV|OM CHE|CL MEN
+Yaya Touré|CIV|MON FCBA MCI|CL MES MEN
+Christian Pulisic|USA|BVB CHE MIL|CL
+Weston McKennie|USA|S04 JUV|
+Alphonso Davies|CAN|FCB|CL MDE
+Arturo Vidal|CHI|B04 JUV FCB FCBA INT|CA MDE MES MIT
+Alexis Sánchez|CHI|FCBA ARS MUN INT OM SEV|CA MES MIT
+James Rodríguez|COL|MON RMA FCB|CL MES MDE EL
+Radamel Falcao|COL|ATM CHE MUN MON|EL MFR
+Gareth Bale|WAL|TOT RMA|CL MES
+Granit Xhaka|SUI|BMG ARS B04|MDE
+Xherdan Shaqiri|SUI|FCB INT LIV OL|CL MDE MEN
+Yann Sommer|SUI|BMG FCB INT|MDE MIT
+Edin Džeko|BIH|WOB MCI ROM INT S04|MDE MEN
+Hakan Çalhanoğlu|TUR|B04 MIL INT|MIT
+Luka Jović|SRB|SGE RMA MIL|MES
+Filip Kostić|SRB|VFB SGE JUV|EL
+Dominik Szoboszlai|HUN|RBL LIV|MEN
+Benjamin Šeško|SVN|RBL MUN|
+Naby Keïta|GUI|RBL LIV|CL MEN
+Serhou Guirassy|GUI|VFB BVB|
+Pavel Nedvěd|CZE|JUV|BDO MIT
+Andriy Shevchenko|UKR|MIL CHE|BDO CL MIT
+Pierre-Emile Højbjerg|DEN|FCB TOT OM|MDE
+Scott McTominay|SCO|MUN NAP|MIT
+Luis Díaz|COL|LIV FCB|MEN MDE
+Alexander Isak|SWE|BVB LIV|
+Viktor Gyökeres|SWE|ARS|MEN
+Eberechi Eze|ENG|ARS|MEN
+Noni Madueke|ENG|CHE ARS|MEN
+Gabriel Magalhães|BRA|ARS|MEN
+Jurriën Timber|NED|ARS|MEN
+Riccardo Calafiori|ITA|ARS|MEN
+Ben White|ENG|ARS|MEN
+Myles Lewis-Skelly|ENG|ARS|MEN
+Piero Hincapié|ECU|B04 ARS|MDE MEN
+David Raya|ESP|ARS|EM WM MEN
+Kepa Arrizabalaga|ESP|CHE RMA ARS|CL EL MES MEN|Kepa
+Unai Simón|ESP||EM WM
+Joan García|ESP|FCBA|WM MES
+Marc Cucurella|ESP|CHE RMA|EM WM
+Pau Cubarsí|ESP|FCBA|WM MES
+Eric García|ESP|MCI FCBA|WM MES
+Marc Pubill|ESP|ATM|WM
+Marcos Llorente|ESP|RMA ATM|WM CL MES
+Pedro Porro|ESP|TOT|WM EL
+Álex Baena|ESP|ATM|EM WM
+Mikel Oyarzabal|ESP||EM WM
+Nico Williams|ESP||EM WM
+Yeremy Pino|ESP||WM EL
+Borja Iglesias|ESP|B04|WM MDE
+Víctor Muñoz|ESP|LIV|WM
+Dean Huijsen|ESP|JUV ROM RMA|
+Franco Mastantuono|ARG|RMA|
+Ronald Araújo|URU|FCBA LIV|MES
+Andreas Christensen|DEN|CHE BMG FCBA|CL MES
+Alejandro Balde|ESP|FCBA|MES
+Fermín López|ESP|FCBA|MES
+Ansu Fati|ESP|FCBA MON|MES
+Manuel Akanji|SUI|BVB MCI INT|CL MEN MIT
+Henrikh Mkhitaryan|ARM|BVB MUN ARS ROM INT|EL MIT
+Federico Dimarco|ITA|INT|MIT
+Davide Frattesi|ITA|INT|MIT
+Piotr Zieliński|POL|NAP INT|MIT
+Stefan de Vrij|NED|INT|MIT
+Francesco Acerbi|ITA|MIL INT|MIT
+Warren Zaïre-Emery|FRA|PSG|CL MFR
+Willian Pacho|ECU|PSG|CL MFR
+Gonçalo Ramos|POR|PSG MIL|CL MFR
+Lucas Chevalier|FRA|PSG|CL MFR
+Illia Zabarnyi|UKR|PSG|CL MFR
+Lee Kang-in|KOR|VAL PSG ATM|CL MFR
+Youri Tielemans|BEL|MUN MON|EL
+Morgan Rogers|ENG|CHE|EL
+Andy Robertson|SCO|LIV TOT|CL MEN|Andrew Robertson
+Curtis Jones|ENG|LIV INT|MEN
+Mykhailo Mudryk|UKR|CHE TOT|
+Tijjani Reijnders|NED|MIL MCI|
+Jonathan David|CAN|JUV ATM|MFR
+Nahuel Molina|ARG|ATM ROM|WM CA
+Loïs Openda|BEL|RBL JUV OL|
+Nick Woltemade|GER|VFB JUV|
+Donyell Malen|NED|BVB ROM|
+Leonardo Balerdi|ARG|BVB OM ROM|
+Karim Adeyemi|GER|BVB FCBA|
+Moussa Diaby|FRA|PSG B04|MFR
+Hwang Hee-chan|KOR|RBL S04|
+Robin Gosens|GER|INT S04|
+Endrick|BRA|RMA OL|
+Anthony Gordon|ENG|FCBA|
+Elliot Anderson|ENG|MCI||Elliott Anderson
+Yan Diomande|CIV|RBL RMA|
+Savinho|BRA|MCI TOT||Sávio
+Bruno Guimarães|BRA|OL ARS|
+Iliman Ndiaye|SEN|OM MCI|
+Antoine Semenyo|GHA|MCI|
+Marc Guéhi|ENG|MCI|
+Conor Gallagher|ENG|CHE ATM TOT|
+Ademola Lookman|NGA|RBL ATM|EL
+Tammy Abraham|ENG|CHE ROM MIL|CL EL
+Nicolas Jackson|SEN|CHE FCB|MDE
+João Palhinha|POR|FCB TOT|MDE
+Giacomo Raspadori|ITA|NAP ATM|EM MIT
+João Pedro|BRA|CHE|
+Estêvão|BRA|CHE|
+Alejandro Garnacho|ARG|MUN CHE|
+Bryan Mbeumo|CMR|MUN|
+Matheus Cunha|BRA|ATM MUN|
+Jonathan Burkardt|GER|SGE|
+Konrad Laimer|AUT|RBL FCB|MDE
+Josip Stanišić|CRO|FCB B04|MDE
+Karl-Heinz Rummenigge|GER|FCB INT|EM CL MDE BDO
+Gerd Müller|GER|FCB|WM EM CL MDE BDO
+Franz Beckenbauer|GER|FCB|WM EM CL MDE BDO
+Sepp Maier|GER|FCB|WM EM CL MDE
+Paul Breitner|GER|FCB RMA|WM EM CL MDE MES
+Uli Hoeneß|GER|FCB|WM EM CL MDE
+Berti Vogts|GER|BMG|WM EL MDE
+Günter Netzer|GER|BMG RMA|WM EM MDE MES
+Jupp Heynckes|GER|BMG|WM EM EL MDE
+Rainer Bonhof|GER|BMG VAL|WM EM EL MDE
+Uli Stielike|GER|BMG RMA|EM EL MDE MES
+Bernd Schuster|GER|FCBA RMA ATM B04|EM MES
+Klaus Allofs|GER|OM|EM MFR
+Klaus Augenthaler|GER|FCB|WM MDE
+Andreas Brehme|GER|FCB INT|WM EL MDE MIT
+Rudi Völler|GER|ROM OM B04|WM CL
+Thomas Häßler|GER|JUV ROM BVB|WM EM
+Jürgen Kohler|GER|FCB JUV BVB|WM EM CL EL MDE MIT
+Matthias Sammer|GER|VFB INT BVB|EM CL MDE BDO
+Andreas Möller|GER|SGE BVB JUV S04|WM EM CL EL MDE
+Stefan Reuter|GER|FCB JUV BVB|WM EM CL MDE
+Karl-Heinz Riedle|GER|BVB LIV|WM CL MDE|Kalle Riedle
+Guido Buchwald|GER|VFB|WM MDE
+Thomas Berthold|GER|SGE ROM FCB VFB|WM
+Frank Mill|GER|BMG BVB|WM
+Olaf Thon|GER|S04 FCB|WM EL MDE
+Stefan Effenberg|GER|BMG FCB WOB|CL MDE
+Thomas Helmer|GER|BVB FCB|EM EL MDE
+Thomas Strunz|GER|FCB VFB|EM CL EL MDE
+Mehmet Scholl|GER|FCB|EM CL EL MDE
+Mario Basler|GER|FCB|EM MDE
+Oliver Bierhoff|GER|MIL MON|EM MIT
+Christian Ziege|GER|FCB MIL LIV TOT BMG|EM EL MDE
+Markus Babbel|GER|FCB LIV VFB|EM EL MDE
+Steffen Freund|GER|S04 BVB TOT|EM CL MDE
+Fredi Bobic|GER|VFB BVB|EM
+Lars Ricken|GER|BVB|CL MDE
+Michael Zorc|GER|BVB|CL MDE
+Jörg Heinrich|GER|BVB|CL MDE
+Dietmar Hamann|GER|FCB LIV MCI|CL EL MDE
+Jens Jeremies|GER|FCB|CL MDE
+Carsten Jancker|GER|FCB|CL MDE
+Alexander Zickler|GER|FCB|CL MDE EL
+Thomas Linke|GER|S04 FCB|CL EL MDE
+Michael Tarnat|GER|FCB MCI|CL MDE
+Jens Lehmann|GER|S04 MIL BVB ARS VFB|EL MDE MEN
+Sebastian Deisler|GER|BMG FCB|MDE
+Christoph Metzelder|GER|BVB RMA S04|MDE MES
+Torsten Frings|GER|BVB FCB|MDE
+Sebastian Kehl|GER|BVB|MDE
+Bernd Schneider|GER|SGE B04|
+Oliver Neuville|GER|B04 BMG|
+Ulf Kirsten|GER|B04|
+Kevin Kurányi|GER|VFB S04|
+Gerald Asamoah|GER|S04|
+Timo Hildebrand|GER|VFB VAL S04 SGE|MDE
+Thomas Hitzlsperger|GER|VFB WOB|MDE
+Cacau|GER|VFB|MDE
+Serdar Tasci|GER|VFB FCB|MDE
+Christian Gentner|GER|VFB WOB|MDE
+Marcel Schäfer|GER|WOB|MDE
+Marcell Jansen|GER|BMG FCB|MDE
+Holger Badstuber|GER|FCB S04 VFB|CL MDE
+Patrick Helmes|GER|B04 WOB|
+Simon Rolfes|GER|B04|
+Stefan Kießling|GER|B04|
+Sven Bender|GER|BVB B04|MDE
+Lars Bender|GER|B04|
+Marcel Schmelzer|GER|BVB|MDE
+Marko Marin|GER|BMG CHE SEV|EL
+Max Meyer|GER|S04|
+Lars Stindl|GER|BMG|
+Florian Neuhaus|GER|BMG|
+Patrick Herrmann|GER|BMG|
+Max Kruse|GER|BMG WOB|
+Mahmoud Dahoud|GER|BMG BVB|
+Julian Weigl|GER|BVB BMG|
+Youssoufa Moukoko|GER|BVB|
+Niklas Süle|GER|FCB BVB|MDE
+Sebastian Rudy|GER|VFB FCB S04|MDE
+Sandro Wagner|GER|FCB|MDE
+Jonas Hofmann|GER|BVB BMG B04|MDE
+Kevin Volland|GER|B04 MON|
+Benjamin Henrichs|GER|B04 MON RBL|
+Lukas Klostermann|GER|RBL|
+Marcel Halstenberg|GER|RBL|
+David Raum|GER|RBL|
+Diego Demme|GER|RBL NAP|MIT
+Ridle Baku|GER|WOB RBL|
+Maximilian Arnold|GER|WOB|
+Felix Nmecha|GER|WOB BVB|
+Lukas Nmecha|GER|WOB|
+Waldemar Anton|GER|VFB BVB|
+Maximilian Beier|GER|BVB|
+Pascal Groß|GER|BVB|
+Chris Führich|GER|VFB|
+Deniz Undav|GER|VFB|
+Maximilian Mittelstädt|GER|VFB|
+Jamie Leweling|GER|VFB|
+Robin Koch|GER|SGE|
+Malick Thiaw|GER|S04 MIL|
+Nadiem Amiri|GER|B04|
+Tim Kleindienst|GER|BMG|
+Bernd Hölzenbein|GER|SGE|WM EL
+Jürgen Grabowski|GER|SGE|WM EL
+Uwe Bein|GER|SGE|WM
+Hasan Salihamidžić|BIH|FCB JUV|CL MDE
+Zvjezdan Misimović|BIH|WOB|MDE
+Vedad Ibišević|BIH|PSG VFB S04|
+Sead Kolašinac|BIH|S04 ARS OM|EL
+Miralem Pjanić|BIH|OL ROM JUV FCBA|MIT
+Bixente Lizarazu|FRA|FCB OM|WM EM CL MDE
+Willy Sagnol|FRA|MON FCB|CL MDE MFR
+Daniel Van Buyten|BEL|OM MCI FCB|CL MDE
+Martín Demichelis|ARG|FCB ATM MCI|MDE MEN
+Zé Roberto|BRA|RMA B04 FCB|MDE
+Giovane Élber|BRA|VFB FCB OL BMG|CL MDE MFR
+Claudio Pizarro|PER|FCB CHE|CL MDE
+Roy Makaay|NED|FCB|MDE
+Ivica Olić|CRO|FCB WOB|MDE
+Anatoliy Tymoshchuk|UKR|FCB|CL EL MDE
+Mark van Bommel|NED|FCBA FCB MIL|CL MDE MES MIT
+Juan Bernat|ESP|VAL FCB PSG|MDE MFR
+Mehdi Benatia|MAR|ROM FCB JUV|MDE MIT
+Dante|BRA|BMG FCB WOB|CL MDE
+Rafinha|BRA|S04 FCB|CL MDE
+Luiz Gustavo|BRA|FCB WOB OM|CL MDE
+Eric Maxim Choupo-Moting|CMR|S04 PSG FCB|MDE MFR|Choupo-Moting
+Noussair Mazraoui|MAR|FCB MUN|MDE
+Joshua Zirkzee|NED|FCB MUN|MDE
+Malik Tillman|USA|FCB B04|
+Niko Kovač|CRO|B04 FCB|MDE
+Robert Kovač|CRO|B04 FCB JUV BVB|MDE
+Łukasz Piszczek|POL|BVB|MDE
+Jakub Błaszczykowski|POL|BVB WOB|MDE|Kuba
+Neven Subotić|SRB|BVB|MDE
+Shinji Kagawa|JPN|BVB MUN|MDE MEN
+Tomáš Rosický|CZE|BVB ARS|MDE
+Jan Koller|CZE|BVB MON|MDE
+Márcio Amoroso|BRA|BVB MIL|MDE
+Stéphane Chapuisat|SUI|BVB|CL MDE
+Paulo Sousa|POR|JUV BVB INT|CL MIT
+Sokratis Papastathopoulos|GRE|MIL BVB ARS|MIT|Sokratis
+Roman Bürki|SUI|BVB|
+Thomas Delaney|DEN|BVB SEV|
+Thomas Meunier|BEL|PSG BVB|MFR
+Gregor Kobel|SUI|VFB BVB|
+Ramy Bensebaini|ALG|BMG BVB|
+Gio Reyna|USA|BVB BMG|
+Yan Couto|BRA|BVB|
+Patrik Berger|CZE|BVB LIV|EL MDE
+Patrik Schick|CZE|ROM RBL B04|MDE
+Victor Boniface|NGA|B04|MDE
+Exequiel Palacios|ARG|B04|WM MDE
+Edmond Tapsoba|BFA|B04|MDE
+Odilon Kossounou|CIV|B04|MDE
+Amine Adli|MAR|B04|MDE
+Lukáš Hrádecký|FIN|SGE B04 MON|MDE
+Leon Bailey|JAM|B04 ROM|EL
+Javier Hernández|MEX|MUN RMA B04 SEV|MEN|Chicharito
+Dimitar Berbatov|BUL|B04 TOT MUN MON|MEN
+Emerson Ferreira|BRA|B04 ROM RMA MIL|MIT MES
+Andriy Voronin|UKR|B04 LIV|
+Aleix García|ESP|MCI B04|
+Emil Forsberg|SWE|RBL|
+Yussuf Poulsen|DEN|RBL|
+Péter Gulácsi|HUN|RBL|
+Willi Orbán|HUN|RBL|
+Xaver Schlager|AUT|WOB RBL|
+Kevin Kampl|SVN|BVB B04 RBL|
+Amadou Haidara|MLI|RBL|
+Antonio Nusa|NOR|RBL|
+Christoph Baumgartner|AUT|RBL|
+Lutsharel Geertruida|NED|RBL|
+Nicolas Seiwald|AUT|RBL|
+Alexander Sørloth|NOR|RBL ATM|
+Ebbe Sand|DEN|S04|
+Marc Wilmots|BEL|S04|EL
+Jefferson Farfán|PER|S04|
+Kevin-Prince Boateng|GHA|TOT MIL S04 SGE FCBA|MIT
+Joël Matip|CMR|S04 LIV|CL MEN
+Christian Fuchs|AUT|S04|MEN
+Atsuto Uchida|JPN|S04|
+Kyriakos Papadopoulos|GRE|S04 B04|
+Amine Harit|MAR|S04 OM|
+Ozan Kabak|TUR|VFB S04 LIV|
+Breel Embolo|SUI|S04 BMG MON|
+Nabil Bentaleb|ALG|TOT S04|
+Jermaine Jones|USA|SGE S04|
+Hamit Altıntop|TUR|S04 FCB RMA|MDE MES
+Halil Altıntop|TUR|S04 SGE|
+Mladen Krstajić|SRB|S04|
+Christian Poulsen|DEN|S04 SEV JUV LIV|EL
+Angelos Charisteas|GRE|B04 S04|EM MDE
+Grafite|BRA|WOB|MDE
+Diego Ribas|BRA|WOB ATM JUV|EL
+Diego Benaglio|SUI|WOB MON|MDE
+Ricardo Rodríguez|SUI|WOB MIL|
+Naldo|BRA|WOB S04 MON|
+Wout Weghorst|NED|WOB MUN|
+Josuha Guilavogui|FRA|ATM WOB|
+Koen Casteels|BEL|WOB|
+Jonas Wind|DEN|WOB|
+Patrick Wimmer|AUT|WOB|
+Andreas Skov Olsen|DEN|WOB|
+Mohammed Amoura|ALG|WOB|
+Obafemi Martins|NGA|INT WOB|
+Makoto Hasebe|JPN|WOB SGE|EL MDE
+Allan Simonsen|DEN|BMG FCBA|EL MDE BDO
+Alassane Pléa|FRA|OL BMG|
+Nico Elvedi|SUI|BMG|
+Denis Zakaria|SUI|BMG JUV CHE MON|
+Juan Arango|VEN|BMG|
+Martin Dahlin|SWE|BMG ROM|
+Patrik Andersson|SWE|BMG FCB FCBA|CL MDE
+Krassimir Balakov|BUL|VFB|
+Alexander Hleb|BLR|VFB ARS FCBA WOB|CL MES
+Fernando Meira|POR|VFB|MDE
+Ludovic Magnin|SUI|VFB|MDE
+Pavel Pardo|MEX|VFB|MDE
+Wataru Endo|JPN|VFB LIV|MEN
+Konstantinos Mavropanos|GRE|ARS VFB|
+Saša Kalajdžić|AUT|VFB|
+Borna Sosa|CRO|VFB|
+Jon Dahl Tomasson|DEN|MIL VFB|CL EL MIT MDE
+Anthony Yeboah|GHA|SGE|
+Jay-Jay Okocha|NGA|SGE PSG|
+Sébastien Haller|CIV|SGE BVB|
+Martin Hinteregger|AUT|SGE|EL
+Evan N'Dicka|CIV|SGE ROM|EL
+Djibril Sow|SUI|SGE SEV|EL
+Daichi Kamada|JPN|SGE|EL
+Rafael Borré|COL|SGE|EL
+Timothy Chandler|USA|SGE|EL
+Jesper Lindstrøm|DEN|SGE NAP|EL
+Ellyes Skhiri|TUN|SGE|
+Hugo Larsson|SWE|SGE|
+Arthur Theate|BEL|SGE|
+Ritsu Doan|JPN|SGE|
+Ferenc Puskás|HUN|RMA|CL MES
+Paco Gento|ESP|RMA|CL MES|Francisco Gento
+Emilio Butragueño|ESP|RMA|EL MES
+Míchel González|ESP|RMA|EL MES|Míchel
+Hugo Sánchez|MEX|ATM RMA|EL MES
+Fernando Hierro|ESP|RMA|CL MES
+Manolo Sanchís|ESP|RMA|CL EL MES
+Fernando Redondo|ARG|RMA MIL|CL MES
+Davor Šuker|CRO|SEV RMA ARS|CL MES
+Christian Panucci|ITA|MIL RMA INT CHE MON ROM|CL MIT
+Bodo Illgner|GER|RMA|WM CL MES
+Christian Karembeu|FRA|RMA|WM EM CL
+Nicolas Anelka|FRA|PSG ARS RMA LIV MCI CHE JUV|EM CL MEN MIT
+Iván Helguera|ESP|ROM RMA VAL|CL MES
+Guti|ESP|RMA|CL MES
+Míchel Salgado|ESP|RMA|CL MES
+Santiago Solari|ARG|ATM RMA INT|CL MES MIT
+Esteban Cambiasso|ARG|RMA INT|CL MES MIT
+Walter Samuel|ARG|ROM RMA INT|CL MIT
+Jonathan Woodgate|ENG|RMA TOT|
+Júlio Baptista|BRA|SEV RMA ARS ROM|CA MES
+Robinho|BRA|RMA MCI MIL|CA MES MIT
+Mahamadou Diarra|MLI|OL RMA MON|MES MFR
+Lassana Diarra|FRA|CHE ARS RMA OM PSG|MEN MES MFR
+Fábio Coentrão|POR|RMA MON|CL MES
+Nuri Şahin|TUR|BVB RMA LIV|MDE MES
+Michael Essien|GHA|OL CHE RMA MIL|CL MEN MFR
+Nacho Fernández|ESP|RMA|CL MES|Nacho
+Keylor Navas|CRC|RMA PSG|CL MES MFR
+Dani Ceballos|ESP|RMA ARS|CL MES
+Sergio Reguilón|ESP|RMA SEV TOT ATM MUN|EL
+Ferland Mendy|FRA|OL RMA|CL MES
+Brahim Díaz|MAR|MCI RMA MIL|CL MES MIT
+Arda Güler|TUR|RMA|CL MES
+Joselu|ESP|RMA|EM CL MES
+Andriy Lunin|UKR|RMA|CL MES
+Fernando Morientes|ESP|RMA MON LIV VAL OM|CL MES MFR
+Geremi|CMR|RMA CHE|CL MEN
+Iván Campo|ESP|VAL RMA|CL MES
+Iván Zamorano|CHI|SEV RMA INT|EL MES
+Michael Laudrup|DEN|JUV FCBA RMA|CL MES MIT
+Brian Laudrup|DEN|FCB MIL CHE|EM CL MIT
+Gheorghe Hagi|ROU|RMA FCBA|EL
+Robert Prosinečki|CRO|RMA FCBA SEV|CL
+Johan Cruyff|NED|FCBA|CL MES BDO
+Johan Neeskens|NED|FCBA|CL
+Gary Lineker|ENG|FCBA TOT|
+Mark Hughes|WAL|MUN FCBA FCB CHE|MEN
+Ronald Koeman|NED|FCBA|EM CL MES
+Hristo Stoichkov|BUL|FCBA|CL MES BDO
+Romário|BRA|FCBA VAL|WM CA MES
+Pep Guardiola|ESP|FCBA ROM|CL MES
+Andoni Zubizarreta|ESP|FCBA VAL|CL MES
+José Mari Bakero|ESP|FCBA|CL MES
+Txiki Begiristain|ESP|FCBA|CL MES
+Julio Salinas|ESP|ATM FCBA|CL MES
+Luis Enrique|ESP|RMA FCBA|MES
+Frank de Boer|NED|FCBA|CL
+Ronald de Boer|NED|FCBA|CL
+Phillip Cocu|NED|FCBA|MES
+Michael Reiziger|NED|MIL FCBA|CL MES
+Boudewijn Zenden|NED|FCBA CHE LIV OM|MES
+Marc Overmars|NED|ARS FCBA|CL MEN
+Emmanuel Petit|FRA|MON ARS FCBA CHE|WM EM MEN MFR
+Ludovic Giuly|FRA|OL MON FCBA ROM PSG|CL MES MFR
+Edmílson|BRA|OL FCBA|WM CL MES MFR
+Giovanni van Bronckhorst|NED|ARS FCBA|CL MES MEN
+Henrik Larsson|SWE|FCBA MUN|CL MES
+Sylvinho|BRA|ARS FCBA MCI|CL MES
+Rafael Márquez|MEX|MON FCBA|CL MES MFR
+Seydou Keita|MLI|SEV FCBA VAL ROM|CL MES
+Maxwell|BRA|INT FCBA PSG|CL MES MIT MFR
+Ibrahim Afellay|NED|FCBA S04|CL MES
+Claudio Bravo|CHI|FCBA MCI|CA CL MES MEN
+Thomas Vermaelen|BEL|ARS FCBA ROM|CL MES
+Jérémy Mathieu|FRA|VAL FCBA|CL MES
+Arda Turan|TUR|ATM FCBA|EL MES
+Aleix Vidal|ESP|SEV FCBA|EL MES
+Paco Alcácer|ESP|VAL FCBA BVB|MES EL
+André Gomes|POR|VAL FCBA|EM MES
+Nélson Semedo|POR|FCBA|MES
+Paulinho|BRA|TOT FCBA|MES
+Yerry Mina|COL|FCBA|
+Clément Lenglet|FRA|SEV FCBA TOT ATM|MES
+Martin Braithwaite|DEN|FCBA|
+Sergiño Dest|USA|FCBA MIL|
+Franck Kessié|CIV|MIL FCBA|MIT MES
+Marcos Alonso|ESP|CHE FCBA|CL EL MEN MES
+Iñigo Martínez|ESP|FCBA|MES
+Emerson Royal|BRA|FCBA TOT MIL|
+Lucas Digne|FRA|PSG ROM FCBA|MES MFR EL
+Wojciech Szczęsny|POL|ARS ROM JUV FCBA|MIT MES
+Arthur Melo|BRA|FCBA JUV LIV|CA MES|Arthur
+Marc Bartra|ESP|FCBA BVB|CL MES
+Sergi Roberto|ESP|FCBA|CL MES
+Rafinha Alcântara|BRA|FCBA INT PSG|MES MFR
+Bojan Krkić|ESP|FCBA ROM MIL|CL MES|Bojan
+Víctor Valdés|ESP|FCBA MUN|WM EM CL MES
+Marc Casadó|ESP|FCBA|MES
+Alex Song|CMR|ARS FCBA|MES
+Gerard Deulofeu|ESP|FCBA SEV MIL|EL
+Munir El Haddadi|MAR|FCBA VAL SEV|EL MES|Munir
+Diego Forlán|URU|MUN ATM INT|CA EL MEN
+Simão Sabrosa|POR|FCBA ATM|EL|Simão
+José Antonio Reyes|ESP|ARS RMA ATM SEV|EL MEN MES
+Filipe Luís|BRA|ATM CHE|CA EL MEN MES
+Juanfran|ESP|ATM|EM EL MES
+Diego Godín|URU|ATM INT|CA EL MES
+Miranda|BRA|ATM INT|EL MES
+Ángel Correa|ARG|ATM|WM CA EL MES
+Yannick Carrasco|BEL|MON ATM|MES
+Jan Oblak|SVN|ATM|EL MES
+Stefan Savić|MNE|MCI ATM|EL MEN MES
+José Giménez|URU|ATM|EL MES
+Mario Hermoso|ESP|ATM ROM|MES
+Robin Le Normand|ESP|ATM|EM
+Giuliano Simeone|ARG|ATM|
+Thiago Almada|ARG|OL ATM|WM
+David Hancko|SVK|ATM|
+Johnny Cardoso|USA|ATM|
+Raúl García|ESP|ATM|EL MES
+Kiko Narváez|ESP|ATM|MES|Kiko
+Thomas Partey|GHA|ATM ARS|EL
+Juninho Paulista|BRA|ATM|WM
+Frédéric Kanouté|MLI|OL TOT SEV|EL
+Luís Fabiano|BRA|SEV|CA EL
+Adriano Correia|BRA|SEV FCBA|CL EL MES
+Carlos Bacca|COL|SEV MIL|EL
+Grzegorz Krychowiak|POL|SEV PSG|EL
+Vitolo|ESP|SEV ATM|EL
+Yevhen Konoplyanka|UKR|SEV S04|EL
+Steven N'Zonzi|FRA|SEV ROM|WM EL
+Lucas Ocampos|ARG|MON OM SEV|EL
+Youssef En-Nesyri|MAR|SEV|EL
+Yassine Bounou|MAR|SEV|EL|Bono
+Erik Lamela|ARG|ROM TOT SEV|EL
+Marcos Acuña|ARG|SEV|WM CA EL
+Gonzalo Montiel|ARG|SEV|WM CA EL
+Papu Gómez|ARG|SEV|WM EL
+Suso|ESP|LIV MIL SEV|EL
+Luuk de Jong|NED|BMG SEV FCBA|EL
+Wissam Ben Yedder|FRA|SEV MON|
+Federico Fazio|ARG|SEV TOT ROM|EL
+Diego Perotti|ARG|SEV ROM|
+Alex Telles|BRA|INT MUN SEV|EL
+Stéphane Mbia|CMR|OM SEV|EL MFR
+Iago Aspas|ESP|LIV SEV|EL
+Gaizka Mendieta|ESP|VAL FCBA|
+Santiago Cañizares|ESP|RMA VAL|CL EL MES
+David Albelda|ESP|VAL|EL MES
+Rubén Baraja|ESP|ATM VAL|EL MES
+Pablo Aimar|ARG|VAL|EL MES
+Roberto Ayala|ARG|NAP MIL VAL|EL MES MIT
+Kily González|ARG|VAL INT|
+Vicente Rodríguez|ESP|VAL|EL MES|Vicente
+Carlos Marchena|ESP|SEV VAL|WM EM EL MES
+Mauricio Pellegrino|ARG|FCBA VAL LIV|EL MES
+Claudio López|ARG|VAL|
+Mario Kempes|ARG|VAL|WM
+Rodrigo Moreno|ESP|VAL|
+Dani Parejo|ESP|VAL|EL
+Gonçalo Guedes|POR|PSG VAL|
+Carlos Soler|ESP|VAL PSG|MFR
+José Gayà|ESP|VAL|
+Ezequiel Garay|ARG|RMA VAL|
+Joaquín|ESP|VAL|
+Giorgi Mamardashvili|GEO|VAL LIV|
+Bobby Charlton|ENG|MUN|WM CL MEN BDO
+George Best|NIR|MUN|CL MEN BDO
+Bryan Robson|ENG|MUN|MEN
+Eric Cantona|FRA|OM MUN|MEN MFR
+Peter Schmeichel|DEN|MUN MCI|EM CL MEN
+Roy Keane|IRL|MUN|CL MEN
+Ryan Giggs|WAL|MUN|CL MEN
+Gary Neville|ENG|MUN|CL MEN
+Phil Neville|ENG|MUN|CL MEN
+Nicky Butt|ENG|MUN|CL MEN
+Teddy Sheringham|ENG|TOT MUN|CL MEN
+Andy Cole|ENG|MUN MCI|CL MEN
+Dwight Yorke|TRI|MUN|CL MEN
+Ole Gunnar Solskjær|NOR|MUN|CL MEN
+Jaap Stam|NED|MUN MIL|CL MEN
+Denis Irwin|IRL|MUN|CL MEN
+Juan Sebastián Verón|ARG|MUN CHE INT|MEN MIT EL
+Fabien Barthez|FRA|OM MON MUN|WM EM CL MEN MFR
+Laurent Blanc|FRA|NAP FCBA OM INT MUN|WM EM MEN
+Mikaël Silvestre|FRA|INT MUN ARS|CL MEN
+Edwin van der Sar|NED|JUV MUN|CL MEN
+Nemanja Vidić|SRB|MUN INT|CL MEN
+Patrice Evra|FRA|MON MUN JUV OM|CL MEN MIT
+Michael Carrick|ENG|TOT MUN|CL EL MEN
+Park Ji-sung|KOR|MUN|CL MEN
+Darren Fletcher|SCO|MUN|CL MEN
+Antonio Valencia|ECU|MUN|EL MEN
+Ashley Young|ENG|MUN INT|EL MEN MIT
+Phil Jones|ENG|MUN|EL MEN
+David de Gea|ESP|ATM MUN|EL MEN
+Ander Herrera|ESP|MUN PSG|EL MFR
+Daley Blind|NED|MUN FCB|EL MDE
+Anthony Martial|FRA|OL MON MUN SEV|EL
+Nemanja Matić|SRB|CHE MUN ROM OL|MEN
+Victor Lindelöf|SWE|MUN|EL
+Fred|BRA|MUN|
+Harry Maguire|ENG|MUN|
+Luke Shaw|ENG|MUN|EL
+Donny van de Beek|NED|MUN|
+Antony|BRA|MUN|
+Lisandro Martínez|ARG|MUN|WM CA
+André Onana|CMR|INT MUN|
+Rasmus Højlund|DEN|MUN NAP|
+Kobbie Mainoo|ENG|MUN|
+Manuel Ugarte|URU|PSG MUN|MFR
+Amad Diallo|CIV|MUN|
+Louis Saha|FRA|MUN TOT|CL MEN
+Wes Brown|ENG|MUN|CL MEN
+Kléberson|BRA|MUN|WM
+Rafael da Silva|BRA|MUN OL|MEN
+Jesse Lingard|ENG|MUN|EL
+Mason Greenwood|ENG|MUN OM|
+Dean Henderson|ENG|MUN|
+Tim Howard|USA|MUN|
+Karel Poborský|CZE|MUN|MEN
+Sofyan Amrabat|MAR|MUN|
+Pablo Zabaleta|ARG|MCI|MEN
+Joe Hart|ENG|MCI|MEN
+Gaël Clichy|FRA|ARS MCI|MEN
+Aleksandar Kolarov|SRB|MCI ROM INT|MEN MIT
+James Milner|ENG|MCI LIV|CL MEN
+Emmanuel Adebayor|TOG|MON ARS MCI RMA TOT|
+Craig Bellamy|WAL|LIV MCI|
+Shaun Wright-Phillips|ENG|MCI CHE|MEN
+Kolo Touré|CIV|ARS MCI LIV|MEN
+Eliaquim Mangala|FRA|MCI VAL|
+Stevan Jovetić|MNE|MCI INT SEV MON|MEN
+Fabian Delph|ENG|MCI|MEN
+Willy Caballero|ARG|MCI CHE|CL EL
+Bacary Sagna|FRA|ARS MCI|
+Danilo|BRA|RMA MCI JUV|CL MEN MES MIT
+Oleksandr Zinchenko|UKR|MCI ARS|MEN
+Kelechi Iheanacho|NGA|MCI SEV|
+Kalvin Phillips|ENG|MCI|CL MEN
+Matheus Nunes|POR|MCI|MEN
+Rico Lewis|ENG|MCI|CL MEN
+Joleon Lescott|ENG|MCI|MEN
+Micah Richards|ENG|MCI|MEN
+Gareth Barry|ENG|MCI|MEN
+Nigel de Jong|NED|MCI MIL|MEN
+Kasper Schmeichel|DEN|MCI|MEN
+Rayan Aït-Nouri|ALG|MCI|
+Gerónimo Rulli|ARG|OM MCI|WM CA EL
+Kenny Dalglish|SCO|LIV|CL MEN
+Ian Rush|WAL|LIV JUV|CL MEN
+Kevin Keegan|ENG|LIV|CL EL MEN BDO
+Graeme Souness|SCO|LIV|CL MEN
+John Barnes|ENG|LIV|MEN
+Robbie Fowler|ENG|LIV MCI|EL
+Emile Heskey|ENG|LIV|EL
+Sami Hyypiä|FIN|LIV B04|CL EL
+Jerzy Dudek|POL|LIV RMA|CL MES
+Luis García|ESP|ATM FCBA LIV|CL
+Djibril Cissé|FRA|LIV OM|CL
+Milan Baroš|CZE|LIV OL|CL MFR
+John Arne Riise|NOR|MON LIV ROM|CL MFR
+Steve Finnan|IRL|LIV|CL
+Harry Kewell|AUS|LIV|CL
+Dirk Kuyt|NED|LIV|
+Ryan Babel|NED|LIV|
+Daniel Agger|DEN|LIV|
+Martin Škrtel|SVK|LIV|
+Lucas Leiva|BRA|LIV|
+Raul Meireles|POR|LIV CHE|CL
+Andy Carroll|ENG|LIV|
+Glen Johnson|ENG|CHE LIV|MEN
+Adam Lallana|ENG|LIV|CL MEN
+Alex Oxlade-Chamberlain|ENG|ARS LIV|CL MEN
+Divock Origi|BEL|LIV MIL|CL MEN
+Kostas Tsimikas|GRE|LIV ROM|MEN
+Darwin Núñez|URU|LIV|MEN
+Takumi Minamino|JPN|LIV MON|MEN
+Vladimír Šmicer|CZE|LIV|CL EL MFR
+Gary McAllister|SCO|LIV|EL MEN
+Momo Sissoko|MLI|VAL LIV JUV PSG|MFR
+Peter Crouch|ENG|LIV TOT|
+Maxi Rodríguez|ARG|ATM LIV|
+Albert Riera|ESP|MCI LIV|
+Dejan Lovren|CRO|OL LIV|CL MEN
+Simon Mignolet|BEL|LIV|CL
+Rigobert Song|CMR|LIV|
+Gianfranco Zola|ITA|NAP CHE|MIT EL
+Gianluca Vialli|ITA|JUV CHE|CL EL MIT
+Marcel Desailly|FRA|OM MIL CHE|WM EM CL MIT
+Frank Leboeuf|FRA|CHE OM|WM
+Gus Poyet|URU|CHE TOT|CA
+Roberto Di Matteo|ITA|CHE|
+Jimmy Floyd Hasselbaink|NED|ATM CHE|
+Eiður Guðjohnsen|ISL|CHE FCBA MON TOT|CL MEN MES
+Damien Duff|IRL|CHE|MEN
+Petr Čech|CZE|CHE ARS|CL EL MEN
+Paulo Ferreira|POR|CHE|CL EL MEN
+William Gallas|FRA|OM CHE ARS TOT|MEN
+Florent Malouda|FRA|OL CHE|CL MEN MFR
+José Bosingwa|POR|CHE|CL
+Branislav Ivanović|SRB|CHE|CL EL MEN
+Salomon Kalou|CIV|CHE|CL MEN
+John Obi Mikel|NGA|CHE|CL EL MEN
+Ramires|BRA|CHE|CL EL MEN
+César Azpilicueta|ESP|OM CHE ATM SEV|CL EL MEN
+Gary Cahill|ENG|CHE|CL EL MEN
+Loïc Rémy|FRA|OL OM CHE|MEN
+Victor Moses|NGA|CHE INT|EL MEN
+Michy Batshuayi|BEL|OM CHE BVB VAL SGE|MEN
+Callum Hudson-Odoi|ENG|CHE B04|CL EL
+Reece James|ENG|CHE|CL
+Ben Chilwell|ENG|CHE|CL
+Hakim Ziyech|MAR|CHE|CL
+Édouard Mendy|SEN|CHE|CL
+Wesley Fofana|FRA|CHE|
+Moisés Caicedo|ECU|CHE|
+Axel Disasi|FRA|MON CHE|
+Malo Gusto|FRA|OL CHE|
+Levi Colwill|ENG|CHE|
+Pedro Neto|POR|CHE|
+Joe Cole|ENG|CHE LIV|MEN
+Wayne Bridge|ENG|CHE MCI|MEN
+Scott Parker|ENG|CHE TOT|
+Juliano Belletti|BRA|FCBA CHE|WM CL MES MEN
+Yuri Zhirkov|RUS|CHE|MEN EL
+Ross Barkley|ENG|CHE|EL
+Kurt Zouma|FRA|CHE|CL MEN
+Mateja Kežman|SRB|CHE ATM PSG|MEN
+Tore André Flo|NOR|CHE|
+Tony Adams|ENG|ARS|MEN
+Lee Dixon|ENG|ARS|MEN
+Nigel Winterburn|ENG|ARS|MEN
+Martin Keown|ENG|ARS|MEN
+David Seaman|ENG|ARS MCI|MEN
+Ian Wright|ENG|ARS|MEN
+Freddie Ljungberg|SWE|ARS|MEN
+Sylvain Wiltord|FRA|ARS OL|EM MEN MFR
+Lauren|CMR|ARS|MEN
+Edu Gaspar|BRA|ARS VAL|MEN|Edu
+Nwankwo Kanu|NGA|INT ARS|CL EL MEN|Kanu
+Mathieu Flamini|FRA|OM ARS MIL|MIT
+Emmanuel Eboué|CIV|ARS|
+Eduardo da Silva|CRO|ARS|
+Theo Walcott|ENG|ARS|
+Jack Wilshere|ENG|ARS|
+Aaron Ramsey|WAL|ARS JUV|MIT
+Santi Cazorla|ESP|ARS|EM
+Laurent Koscielny|FRA|ARS|
+Nacho Monreal|ESP|ARS|
+Danny Welbeck|ENG|MUN ARS|MEN
+Lucas Torreira|URU|ARS ATM|MES
+Kieran Tierney|SCO|ARS|
+Emile Smith Rowe|ENG|ARS|
+Aaron Ramsdale|ENG|ARS|
+Takehiro Tomiyasu|JPN|ARS|
+Christian Nørgaard|DEN|ARS|MEN
+Jakub Kiwior|POL|ARS|
+Łukasz Fabiański|POL|ARS|
+Mohamed Elneny|EGY|ARS|
+Alex Iwobi|NGA|ARS|
+Nicolas Pépé|CIV|ARS|
+Gervinho|CIV|ARS ROM|MFR
+Philippe Senderos|SUI|ARS MIL VAL|
+Johan Djourou|SUI|ARS|
+Ezri Konsa|ENG|ARS|EL
+David Platt|ENG|JUV ARS|EL MEN
+Glenn Hoddle|ENG|TOT MON CHE|EL MFR
+Ossie Ardiles|ARG|TOT PSG|WM EL
+Paul Gascoigne|ENG|TOT|
+David Ginola|FRA|PSG TOT|MFR
+Ledley King|ENG|TOT|
+Robbie Keane|IRL|INT LIV TOT|
+Jermain Defoe|ENG|TOT|
+Aaron Lennon|ENG|TOT|
+Michael Dawson|ENG|TOT|
+Christian Eriksen|DEN|TOT INT MUN|MIT
+Mousa Dembélé|BEL|TOT|
+Dele Alli|ENG|TOT|
+Lucas Moura|BRA|PSG TOT|MFR
+Moussa Sissoko|FRA|TOT|
+Davinson Sánchez|COL|TOT|
+Tanguy Ndombele|FRA|OL TOT NAP|MIT
+Giovani Lo Celso|ARG|PSG TOT|CA MFR
+Dejan Kulusevski|SWE|JUV TOT|EL
+Richarlison|BRA|TOT|CA
+Yves Bissouma|MLI|TOT|EL
+Guglielmo Vicario|ITA|TOT JUV|EL
+Micky van de Ven|NED|WOB TOT|EL
+James Maddison|ENG|TOT|EL
+Brennan Johnson|WAL|TOT|EL
+Destiny Udogie|ITA|TOT|EL
+Dominic Solanke|ENG|LIV TOT|EL
+Rodrigo Bentancur|URU|JUV TOT|EL MIT
+Pape Matar Sarr|SEN|TOT JUV|EL
+Mohammed Kudus|GHA|TOT|
+Lucas Bergvall|SWE|TOT|EL
+Kevin Danso|AUT|TOT|
+Steven Bergwijn|NED|TOT|
+Nacer Chadli|BEL|TOT MON|
+Serge Aurier|CIV|PSG TOT|MFR
+Kasey Keller|USA|TOT BMG|
+Clint Dempsey|USA|TOT|
+Michel Platini|FRA|JUV|EM CL MIT BDO
+Dino Zoff|ITA|NAP JUV|WM EM EL MIT
+Gaetano Scirea|ITA|JUV|WM CL EL MIT
+Paolo Rossi|ITA|JUV MIL|WM CL MIT BDO
+Marco Tardelli|ITA|JUV INT|WM CL EL MIT
+Antonio Cabrini|ITA|JUV|WM CL EL MIT
+Claudio Gentile|ITA|JUV|WM EL MIT
+Zbigniew Boniek|POL|JUV ROM|CL MIT
+Fabrizio Ravanelli|ITA|JUV OM|CL EL MIT
+Antonio Conte|ITA|JUV|CL EL MIT
+Angelo Peruzzi|ITA|ROM JUV INT|WM CL EL MIT
+Ciro Ferrara|ITA|NAP JUV|CL EL MIT
+Paolo Montero|URU|JUV|MIT
+David Trezeguet|FRA|MON JUV|WM EM MIT MFR
+Mauro Camoranesi|ITA|JUV VFB|WM MIT
+Claudio Marchisio|ITA|JUV|MIT
+Mirko Vučinić|MNE|ROM JUV|MIT
+Stephan Lichtsteiner|SUI|JUV ARS|MIT
+Kwadwo Asamoah|GHA|JUV INT|MIT
+Fernando Llorente|ESP|JUV SEV TOT NAP|WM EM EL MIT
+Roberto Pereyra|ARG|JUV|MIT
+Juan Cuadrado|COL|CHE JUV INT|MEN MIT
+Alex Sandro|BRA|JUV|MIT
+Merih Demiral|TUR|JUV|MIT
+Dušan Vlahović|SRB|JUV|
+Gleison Bremer|BRA|JUV|
+Kenan Yıldız|TUR|JUV|
+Teun Koopmeiners|NED|JUV|EL
+Khéphren Thuram|FRA|JUV|
+Francisco Conceição|POR|JUV|
+Andrea Cambiaso|ITA|JUV|
+Federico Gatti|ITA|JUV|
+Nico González|ARG|VFB JUV ATM|CA
+Moise Kean|ITA|JUV PSG|MIT
+Olof Mellberg|SWE|JUV|
+Alessio Tacchinardi|ITA|JUV|CL MIT
+Attilio Lombardo|ITA|JUV|CL MIT
+Dino Baggio|ITA|INT JUV|EL
+Demetrio Albertini|ITA|MIL ATM FCBA|CL MES MIT
+Sandro Mazzola|ITA|INT|EM CL MIT
+Giacinto Facchetti|ITA|INT|EM CL MIT
+Walter Zenga|ITA|INT|EL MIT
+Giuseppe Bergomi|ITA|INT|WM EL MIT
+Nicola Berti|ITA|INT TOT|EL MIT
+Gianluca Pagliuca|ITA|INT|EL MIT
+Youri Djorkaeff|FRA|MON PSG INT|WM EM EL
+Álvaro Recoba|URU|INT|MIT EL
+Iván Córdoba|COL|INT|CA CL MIT
+Francesco Toldo|ITA|INT|CL MIT
+Julio Cruz|ARG|INT|MIT
+Maicon|BRA|MON INT MCI ROM|CA CL MIT
+Júlio César|BRA|INT|CL MIT
+Dejan Stanković|SRB|INT|CL MIT
+Thiago Motta|ITA|FCBA ATM INT PSG|CL MES MIT MFR
+Goran Pandev|MKD|INT NAP|CL MIT
+Diego Milito|ARG|INT|CL MIT
+Sulley Muntari|GHA|INT MIL|CL MIT
+Rodrigo Palacio|ARG|INT|
+Mauro Icardi|ARG|INT PSG|MFR
+Marcelo Brozović|CRO|INT|MIT
+Milan Škriniar|SVK|INT PSG|MIT MFR
+Samir Handanović|SVN|INT|MIT
+Matteo Darmian|ITA|MUN INT|EL MIT
+Joaquín Correa|ARG|SEV INT OM|CA
+Radja Nainggolan|BEL|ROM INT|
+Francesco Pio Esposito|ITA|INT|MIT|Pio Esposito
+Carlos Augusto|BRA|INT|MIT
+Luis Henrique|BRA|OM INT|MIT
+Cristian Chivu|ROU|ROM INT|CL MIT
+Ricardo Quaresma|POR|FCBA INT CHE|EM CL MIT
+Maniche|POR|CHE ATM INT|CL MIT EL
+Marko Arnautović|AUT|INT|CL MIT
+Nicolás Burdisso|ARG|INT ROM|MIT
+Amantino Mancini|BRA|ROM INT MIL|MIT|Mancini
+Georgios Karagounis|GRE|INT|EM
+Emre Belözoğlu|TUR|INT ATM|EL
+Hakan Şükür|TUR|INT|EL
+Sérgio Conceição|POR|INT|MIT
+Cédric Soares|POR|INT ARS|EM
+João Mário|POR|INT|EM
+Franco Baresi|ITA|MIL|WM CL MIT
+Mauro Tassotti|ITA|MIL|CL MIT
+Alessandro Costacurta|ITA|MIL|CL MIT
+Carlo Ancelotti|ITA|ROM MIL|CL MIT
+Roberto Donadoni|ITA|MIL|CL MIT
+Frank Rijkaard|NED|MIL|EM CL MIT
+Zvonimir Boban|CRO|MIL|CL MIT
+George Weah|LBR|MON PSG MIL CHE MCI OM|MIT MFR BDO
+Jean-Pierre Papin|FRA|OM MIL FCB|CL EL MIT MFR BDO
+Rui Costa|POR|MIL|CL MIT
+Dida|BRA|MIL|WM CA CL MIT
+Massimo Ambrosini|ITA|MIL|CL MIT
+Serginho|BRA|MIL|CL MIT
+Kakha Kaladze|GEO|MIL|CL MIT
+Alexandre Pato|BRA|MIL CHE|MIT|Pato
+Antonio Cassano|ITA|ROM RMA MIL INT|MES MIT
+Massimo Oddo|ITA|MIL FCB|WM CL
+Stephan El Shaarawy|ITA|MIL MON ROM|
+Keisuke Honda|JPN|MIL|
+Krzysztof Piątek|POL|MIL|
+Ismaël Bennacer|ALG|MIL|MIT
+Alexis Saelemaekers|BEL|MIL|MIT
+Davide Calabria|ITA|MIL|MIT
+Simon Kjær|DEN|WOB ROM SEV MIL|MIT
+Noah Okafor|SUI|MIL|
+Youssouf Fofana|FRA|MON MIL SEV|
+Santiago Giménez|MEX|MIL|
+Strahinja Pavlović|SRB|MON MIL|
+Ignazio Abate|ITA|MIL|MIT
+Mattia De Sciglio|ITA|MIL JUV|MIT
+Riccardo Montolivo|ITA|MIL|
+Alberto Gilardino|ITA|MIL|WM CL
+Mario Yepes|COL|PSG MIL|CA MIT MFR
+Thomas Helveg|DEN|MIL INT BMG|CL MIT
+Marek Jankulovski|CZE|NAP MIL|CL MIT
+Yoann Gourcuff|FRA|MIL OL|CL MFR
+Gianni Rivera|ITA|MIL|EM CL MIT BDO
+Careca|BRA|NAP|EL MIT
+Ezequiel Lavezzi|ARG|NAP PSG|MFR
+Marek Hamšík|SVK|NAP|
+José Callejón|ESP|RMA NAP|MES
+Arkadiusz Milik|POL|NAP OM JUV|
+Hirving Lozano|MEX|NAP|MIT
+Stanislav Lobotka|SVK|NAP|MIT
+André-Frank Zambo Anguissa|CMR|NAP|MIT|Anguissa
+Mathías Olivera|URU|NAP|MIT
+Alex Meret|ITA|NAP|EM MIT
+Billy Gilmour|SCO|CHE NAP|MIT
+Alessandro Buongiorno|ITA|NAP|MIT
+Matteo Politano|ITA|INT NAP|MIT
+Eljif Elmas|MKD|NAP RBL|MIT
+Faouzi Ghoulam|ALG|NAP|
+Amadou Diawara|GUI|NAP ROM|
+Emanuele Giaccherini|ITA|JUV NAP|MIT
+Bruno Conti|ITA|ROM|WM MIT
+Paulo Roberto Falcão|BRA|ROM|MIT
+Aldair|BRA|ROM|WM CA MIT
+Vincenzo Montella|ITA|ROM|MIT
+Damiano Tommasi|ITA|ROM|MIT
+Marco Delvecchio|ITA|ROM|MIT
+Simone Perrotta|ITA|ROM|WM
+Alberto Aquilani|ITA|ROM LIV JUV MIL|
+Philippe Mexès|FRA|ROM MIL|
+Kevin Strootman|NED|ROM OM|
+Cengiz Ünder|TUR|ROM OM|
+Lorenzo Pellegrini|ITA|ROM|
+Bryan Cristante|ITA|MIL ROM|EM
+Gianluca Mancini|ITA|ROM|
+Jordan Veretout|FRA|ROM OM OL|
+Andrea Belotti|ITA|ROM|EM
+Houssem Aouar|ALG|OL ROM|
+Artem Dovbyk|UKR|ROM|
+Manu Koné|FRA|BMG ROM|
+Hidetoshi Nakata|JPN|ROM|MIT
+Vincent Candela|FRA|ROM|WM EM MIT
+Traianos Dellas|GRE|ROM|EM
+Justin Kluivert|NED|ROM RBL VAL|
+Raí|BRA|PSG|WM MFR
+Leonardo|BRA|VAL PSG MIL|WM MIT
+Pauleta|POR|PSG|
+Salvatore Sirigu|ITA|PSG|MFR
+Yohan Cabaye|FRA|PSG|MFR
+Gregory van der Wiel|NED|PSG|MFR
+Layvin Kurzawa|FRA|MON PSG|MFR
+Idrissa Gueye|SEN|PSG|MFR
+Pablo Sarabia|ESP|SEV PSG|MFR
+Jérémy Ménez|FRA|MON ROM PSG MIL|MFR
+Mamadou Sakho|FRA|PSG LIV|MFR
+Alphonse Areola|FRA|PSG RMA|WM MES MFR
+Jérôme Rothen|FRA|MON PSG|
+Chris Waddle|ENG|TOT OM|MFR
+Abedi Pelé|GHA|OM OL|CL MFR
+Basile Boli|FRA|OM|CL MFR
+Alen Bokšić|CRO|OM JUV|CL MIT
+Christophe Dugarry|FRA|MIL FCBA OM|WM EM
+Mamadou Niang|SEN|OM|MFR
+Lucho González|ARG|OM|MFR
+Mathieu Valbuena|FRA|OM OL|MFR
+Steve Mandanda|FRA|OM|WM MFR
+André-Pierre Gignac|FRA|OM|
+Dimitri Payet|FRA|OM|
+Hiroki Sakai|JPN|OM|
+Matteo Guendouzi|FRA|ARS OM|
+Jonathan Clauss|FRA|OM|
+Timothy Weah|USA|PSG JUV OM|MFR
+Enzo Francescoli|URU|OM|CA MFR
+Alain Boghossian|FRA|OM NAP|WM EL
+Sonny Anderson|BRA|OM MON FCBA OL|MES MFR
+Grégory Coupet|FRA|OL ATM PSG|MFR
+Hatem Ben Arfa|FRA|OL OM PSG|MFR
+Jérémy Toulalan|FRA|OL MON|MFR
+Sidney Govou|FRA|OL|MFR
+Lisandro López|ARG|OL|
+Bafétimbi Gomis|FRA|OL OM|
+Maxime Gonalons|FRA|OL ROM SEV|
+Nicolás Tagliafico|ARG|OL|WM CA
+Anthony Lopes|POR|OL|EM
+Malick Fofana|BEL|OL|
+Georges Mikautadze|GEO|OL|
+Kamil Glik|POL|MON|MFR
+Djibril Sidibé|FRA|MON|WM MFR
+Aleksandr Golovin|RUS|MON|
+Folarin Balogun|USA|ARS MON|
+Eliesse Ben Seghir|MAR|MON B04|
+Maghnes Akliouche|FRA|MON|
+Marco Simone|ITA|MIL PSG MON|CL MIT MFR
+Dado Pršo|CRO|MON|
+Tiago Mendes|POR|CHE OL JUV ATM|EL MEN MES MFR|Tiago
+Costinha|POR|MON ATM|CL MFR EL
+Fernando Couto|POR|FCBA|MES MIT EL
+Vítor Baía|POR|FCBA|CL MES EL
+Diogo Dalot|POR|MUN MIL|
+Paulo Futre|POR|ATM OM MIL|CL MIT
+Jari Litmanen|FIN|FCBA LIV|CL EL
+Siniša Mihajlović|SRB|ROM INT|CL MIT
+Adrian Mutu|ROU|INT CHE JUV|
+Martín Cáceres|URU|FCBA JUV SEV|CA CL MES MIT
+Cristian Rodríguez|URU|PSG ATM|CA MES EL
+Gary Medel|CHI|SEV INT|CA
+Charles Aránguiz|CHI|B04|CA
+Mauricio Isla|CHI|JUV OM|CA MIT
+Andrés Guardado|MEX|VAL B04|
+Héctor Herrera|MEX|ATM|MES
+Landon Donovan|USA|B04|
+Fabian Johnson|USA|BMG|
+John Brooks|USA|WOB|
+Tyler Adams|USA|RBL|
+Yunus Musah|USA|VAL MIL|
+Juan Silveira|BRA|B04 ROM|CA|Juan
+Dunga|BRA|VFB|WM CA
+Fernando Gago|ARG|RMA ROM VAL|MES
+Marcos Rojo|ARG|MUN|EL
+Juan Román Riquelme|ARG|FCBA|
+Juan Pablo Sorín|ARG|JUV FCBA PSG|
+Alan Shearer|ENG||MEN
+Bobby Moore|ENG||WM
+Geoff Hurst|ENG||WM
+Gordon Banks|ENG||WM
+Pelé|BRA||WM
+Eusébio|POR||CL BDO
+Ollie Watkins|ENG||EL
+Pau Torres|ESP||EL
+Gerard Moreno|ESP||EL
+Marcos Senna|ESP||EM
+Joan Capdevila|ESP|ATM|WM EM
+Paul Ince|ENG|MUN INT LIV|MEN
+Álvaro Odriozola|ESP|RMA FCB|CL MDE MES
+Aron Winter|NED|INT|EL
+Johnny Heitinga|NED|ATM|
+Khalid Boulahrouz|NED|CHE SEV VFB|
+Adnan Januzaj|BEL|MUN BVB SEV|
+Aleksandar Dragović|AUT|B04|
+Adil Rami|FRA|VAL MIL SEV OM|WM EL MFR
+Abou Diaby|FRA|ARS OM|
+Boubacar Kamara|FRA|OM|
+Fabio Grosso|ITA|INT OL JUV|WM MIT MFR
+Rüştü Reçber|TUR|FCBA|
+Douglas Luiz|BRA|JUV|EL
+Ian Maatsen|NED|CHE BVB|EL
+Amadou Onana|BEL||EL
+John McGinn|SCO||EL
+Matty Cash|POL||EL
+Tyrone Mings|ENG||EL
+Hans-Georg Schwarzenbeck|GER|FCB|WM EM CL MDE
+Dieter Hoeneß|GER|VFB FCB|MDE
+Wolfgang Dremmler|GER|FCB|MDE
+Søren Lerby|DEN|FCB MON|CL MDE
+Jean-Marie Pfaff|BEL|FCB|MDE
+Roland Wohlfarth|GER|FCB|MDE
+Christian Nerlinger|GER|FCB BVB|EL MDE
+Emil Kostadinov|BUL|FCB|EL
+Ciriaco Sforza|SUI|FCB INT|CL EL MDE
+Alain Sutter|SUI|FCB|
+Andreas Herzog|AUT|FCB|EL
+Paulo Sérgio|BRA|B04 ROM FCB|WM CL MDE
+Samuel Kuffour|GHA|FCB ROM|CL MDE
+Pablo Thiam|GUI|VFB FCB WOB|MDE
+Ali Daei|IRN|FCB|MDE
+Ali Karimi|IRN|FCB|MDE
+Roque Santa Cruz|PAR|FCB MCI|CL MDE
+Paolo Guerrero|PER|FCB|MDE
+Tim Borowski|GER|FCB|
+Edson Braafheid|NED|FCB|MDE
+Danijel Pranjić|CRO|FCB|MDE
+Bouna Sarr|SEN|OM FCB|MDE
+Hiroki Ito|JPN|VFB FCB|MDE
+Tom Bischof|GER|FCB|MDE
+Hans-Jörg Butt|GER|B04 FCB|MDE
+Flemming Povlsen|DEN|BVB|EM MDE
+Heiko Herrlich|GER|B04 BMG BVB|CL MDE
+Wolfgang Feiersinger|AUT|BVB|CL
+Paul Lambert|SCO|BVB|CL
+Christian Wörns|GER|B04 PSG BVB|MDE
+Sunday Oliseh|NGA|JUV BVB|MDE
+David Odonkor|GER|BVB|
+Alexander Frei|SUI|BVB|
+Nelson Valdez|PAR|BVB|
+Mladen Petrić|CRO|BVB|
+Mohamed Zidan|EGY|BVB|MDE
+Lucas Barrios|PAR|BVB|MDE
+Adrián Ramos|COL|BVB|
+Gonzalo Castro|GER|B04 BVB VFB|
+Andriy Yarmolenko|UKR|BVB|
+Ömer Toprak|TUR|B04 BVB|
+Salih Özcan|TUR|BVB|
+Daniel Svensson|SWE|BVB|
+Julian Ryerson|NOR|BVB|
+Ebi Smolarek|POL|BVB|
+Rubén Sosa|URU|INT BVB|CA EL MDE
+Andreas Thom|GER|B04|
+Jens Nowotny|GER|B04|
+Carsten Ramelow|GER|B04|
+Yıldıray Baştürk|TUR|B04 VFB|
+Jacek Krzynówek|POL|B04 WOB|
+Tranquillo Barnetta|SUI|B04 S04 SGE|
+Sergej Barbarez|BIH|BVB B04|
+Renato Augusto|BRA|B04|
+Eren Derdiyok|SUI|B04|
+Michal Kadlec|CZE|B04|
+Sidney Sam|GER|B04 S04|
+Karim Bellarabi|GER|B04|
+Wendell|BRA|B04|
+Lucas Alario|ARG|B04 SGE|
+Kerem Demirbay|GER|B04|
+Mark Flekken|NED|B04|
+Ibrahim Maza|ALG|B04|
+Adam Hložek|CZE|B04|MDE
+Cha Bum-kun|KOR|SGE B04|EL
+Sardar Azmoun|IRN|B04 ROM|
+Nordi Mukiele|FRA|RBL PSG B04|MDE MFR
+André Silva|POR|MIL SEV SGE RBL|
+Arthur Vermeeren|BEL|ATM RBL|
+Johan Bakayoko|BEL|RBL|
+Klaus Fischer|GER|S04|
+Tomasz Hajto|POL|S04|
+Émile Mpenza|BEL|S04|
+Jörg Böhme|GER|S04|
+Fabian Ernst|GER|S04|
+Heiko Westermann|GER|S04|
+Lewis Holtby|GER|S04 TOT|
+Teemu Pukki|FIN|S04|
+Dennis Aogo|GER|S04|
+Matija Nastasić|SRB|MCI S04|MEN
+Guido Burgstaller|AUT|S04|
+Suat Serdar|GER|S04|
+Mark Uth|GER|S04|
+Salif Sané|SEN|S04|
+Maya Yoshida|JPN|S04|
+Levan Kobiashvili|GEO|S04|
+Maximilian Wöber|AUT|SEV BMG S04|
+Andrés D'Alessandro|ARG|WOB|
+Martin Petrov|BUL|WOB ATM MCI|
+Mike Hanke|GER|S04 WOB BMG|
+Sascha Riether|GER|WOB S04|MDE
+Ashkan Dejagah|IRN|WOB|MDE
+Alexander Madlung|GER|WOB|MDE
+Cristian Zaccardo|ITA|WOB MIL|WM MDE
+Bas Dost|NED|WOB SGE|
+Vieirinha|POR|WOB|
+Josip Brekalo|CRO|WOB|
+Admir Mehmedi|SUI|B04 WOB|
+Renato Steffen|SUI|WOB|
+Kevin Mbabu|SUI|WOB|
+Mattias Svanberg|SWE|WOB|
+Lovro Majer|CRO|WOB|
+Joakim Mæhle|DEN|WOB|
+Denis Vavro|SVK|WOB|
+Konstantinos Koulierakis|GRE|WOB ROM|
+Kamil Grabara|POL|WOB JUV|
+Herbert Wimmer|GER|BMG|WM EM EL MDE
+Henning Jensen|DEN|BMG RMA|EL MDE MES
+Uwe Rahn|GER|BMG|
+Martin Stranzl|AUT|VFB BMG|
+Håvard Nordtveit|NOR|BMG|
+Ibrahima Traoré|GUI|VFB BMG|
+Josip Drmić|SUI|B04 BMG|
+Jannik Vestergaard|DEN|BMG|
+Vincenzo Grifo|ITA|BMG|
+Stefan Lainer|AUT|BMG|
+Valentino Lazaro|AUT|INT BMG|
+Ko Itakura|JPN|BMG|
+Tomáš Čvančara|CZE|BMG|
+Joe Scally|USA|BMG|
+Haris Tabaković|BIH|BMG|
+Shuto Machino|JPN|BMG|
+Jens Castrop|KOR|BMG|
+Toni Polster|AUT|SEV BMG|
+Hansi Müller|GER|VFB INT|EM
+Karlheinz Förster|GER|VFB OM|EM MDE MFR
+Bernd Förster|GER|VFB|EM MDE
+Ásgeir Sigurvinsson|ISL|FCB VFB|MDE
+Maurizio Gaudino|GER|VFB SGE MCI|MDE
+Zvonimir Soldo|CRO|VFB|
+Andreas Hinkel|GER|VFB SEV|EL
+Ioannis Amanatidis|GRE|VFB SGE|
+Ciprian Marica|ROU|VFB S04|
+Roberto Hilbert|GER|VFB B04|MDE
+Ricardo Osorio|MEX|VFB|MDE
+Arthur Boka|CIV|VFB|MDE
+Pavel Pogrebnyak|RUS|VFB|EL
+Zdravko Kuzmanović|SRB|VFB INT|
+Shinji Okazaki|JPN|VFB|MEN
+Gotoku Sakai|JPN|VFB|
+Martin Harnik|AUT|VFB|
+Serey Dié|CIV|VFB|
+Emiliano Insúa|ARG|LIV ATM VFB|
+Fabian Rieder|SUI|VFB|
+Bilal El Khannouss|MAR|VFB|
+Ermedin Demirović|BIH|VFB|
+Jeong Woo-yeong|KOR|FCB VFB|
+Karl-Heinz Körbel|GER|SGE|EL|Charly Körbel
+Bruno Pezzey|AUT|SGE|EL
+Manfred Binz|GER|SGE BVB|
+Theofanis Gekas|GRE|B04 SGE|
+Haris Seferović|SUI|SGE|
+Marco Fabián|MEX|SGE|
+Amin Younes|GER|NAP SGE|
+Jens Petter Hauge|NOR|MIL SGE|EL
+Kristijan Jakić|CRO|SGE|EL
+Rasmus Kristensen|DEN|ROM SGE|
+Fares Chaïbi|ALG|SGE|
+Raymond Kopa|FRA|RMA|CL MES BDO
+Amancio Amaro|ESP|RMA|EM CL MES|Amancio
+Pirri|ESP|RMA|CL MES
+Santillana|ESP|RMA|EL MES
+Juanito|ESP|RMA|EL MES
+Vicente del Bosque|ESP|RMA|MES
+José Antonio Camacho|ESP|RMA|EL MES
+Ricardo Gallego|ESP|RMA|EL MES
+Chendo|ESP|RMA|EL MES
+Rafael Martín Vázquez|ESP|RMA OM|EL MES MFR
+Paco Buyo|ESP|SEV RMA|MES
+Rafael Gordillo|ESP|RMA|EL MES
+Óscar Ruggeri|ARG|RMA|WM CA MES
+Luis Milla|ESP|FCBA RMA VAL|MES
+Rafael Alkorta|ESP|RMA|MES
+José Emilio Amavisca|ESP|RMA|MES
+Aitor Karanka|ESP|RMA|CL MES
+Albert Celades|ESP|FCBA RMA|CL MES
+Pedro Munitis|ESP|RMA|CL MES
+Francisco Pavón|ESP|RMA|CL MES
+Raúl Bravo|ESP|RMA|CL MES
+Thomas Gravesen|DEN|RMA|
+Royston Drenthe|NED|RMA|MES
+Javier Saviola|ARG|FCBA MON SEV RMA|EL MES
+Asier Illarramendi|ESP|RMA|CL
+Diego López|ESP|SEV RMA MIL|CL
+Kiko Casilla|ESP|RMA|CL MES
+Jorge Valdano|ARG|RMA|WM EL MES
+Freddy Rincón|COL|NAP RMA|
+László Kubala|ESP|FCBA|MES
+Luis Suárez Miramontes|ESP|FCBA INT|EM CL MES MIT BDO
+Carles Rexach|ESP|FCBA|MES
+Migueli|ESP|FCBA|MES
+Steve Archibald|SCO|TOT FCBA|EL MES
+Eusebio Sacristán|ESP|ATM FCBA|CL MES
+Albert Ferrer|ESP|FCBA CHE|CL MES
+Miguel Ángel Nadal|ESP|FCBA|CL MES
+Sergi Barjuán|ESP|FCBA ATM|MES
+Iván de la Peña|ESP|FCBA OM|MES
+Gerard López|ESP|VAL FCBA MON|MES
+Gabriel Milito|ARG|FCBA|CL MES
+Giovani dos Santos|MEX|FCBA TOT|
+Dmytro Chygrynskiy|UKR|FCBA|EL MES
+Denis Suárez|ESP|MCI SEV FCBA ARS|EL MES
+Jean-Clair Todibo|FRA|FCBA S04|MES
+Francisco Trincão|POR|FCBA|
+Adama Traoré|ESP|FCBA|
+Vitor Roque|BRA|FCBA|
+Dominik Livaković|CRO|FCBA|
+Jeison Murillo|COL|INT VAL FCBA|MES
+Luis Aragonés|ESP|ATM|MES
+José Luis Caminero|ESP|ATM|MES
+Antonio López|ESP|ATM|EL
+Mariano Pernía|ESP|ATM|
+Luis Perea|COL|ATM|EL
+Álvaro Domínguez|ESP|ATM BMG|EL
+Adrián López|ESP|ATM|EL MES
+Mario Suárez|ESP|ATM|EL MES
+Óliver Torres|ESP|ATM SEV|EL
+Raúl Jiménez|MEX|ATM|
+Alessio Cerci|ITA|ROM ATM MIL|
+Jackson Martínez|COL|ATM|
+Nicolás Gaitán|ARG|ATM|
+Santiago Arias|COL|ATM B04|
+Matteo Ruggeri|ITA|ATM|EL
+Çağlar Söyüncü|TUR|ATM|
+Luboslav Penev|BUL|VAL ATM|MES
+Ivica Dragutinović|SRB|SEV|EL
+Aleksandr Kerzhakov|RUS|SEV|
+Alberto Moreno|ESP|SEV LIV|CL EL
+Luis Muriel|COL|SEV|
+Nolito|ESP|MCI SEV|
+Jesús Corona|MEX|SEV|EL|Tecatito
+Kasper Dolberg|DEN|SEV|
+Dodi Lukébakio|BEL|SEV|
+Rubén Vargas|SUI|SEV|
+Nemanja Gudelj|SRB|SEV|EL
+Bebeto|BRA|SEV|WM
+Matías Almeyda|ARG|SEV INT|MIT
+Fernando Gómez Colomer|ESP|VAL|
+Amedeo Carboni|ITA|ROM VAL|EL MES
+Jocelyn Angloma|FRA|OM INT VAL|CL MES MFR
+John Carew|NOR|VAL ROM OL|MFR
+Miguel Ángel Angulo|ESP|VAL|EL MES
+Asier del Horno|ESP|CHE VAL|MEN
+Aritz Aduriz|ESP|VAL|
+Roberto Soldado|ESP|RMA VAL TOT|
+Sofiane Feghouli|ALG|VAL|
+Enzo Pérez|ARG|VAL|
+Simone Zaza|ITA|JUV VAL|MIT
+Maxi Gómez|URU|VAL|
+Eray Cömert|SUI|VAL|
+Filip Ugrinić|SUI|VAL|
+Mazinho|BRA|VAL|WM
+Valeri Karpin|RUS|VAL|
+Stefan Schwarz|SWE|ARS VAL|
+Denis Cheryshev|RUS|RMA SEV VAL|
+Aymen Abdennour|TUN|MON VAL OM|
+Aly Cissokho|FRA|OL VAL LIV|
+Anthony Réveillère|FRA|VAL OL NAP|MFR
+Denis Law|SCO|MCI MUN|MEN BDO
+Nobby Stiles|ENG|MUN|WM CL MEN
+Gordon Strachan|SCO|MUN|MEN
+Paul McGrath|IRL|MUN|
+Gary Pallister|ENG|MUN|MEN
+Lee Sharpe|ENG|MUN|MEN
+Andrei Kanchelskis|RUS|MUN MCI|MEN
+Ronny Johnsen|NOR|MUN|CL MEN
+Jesper Blomqvist|SWE|MIL MUN|CL MEN
+Henning Berg|NOR|MUN|CL MEN
+Quinton Fortune|RSA|MUN|MEN
+Alan Smith|ENG|MUN|MEN
+John O'Shea|IRL|MUN|CL MEN
+Anderson|BRA|MUN|CL MEN
+Tom Cleverley|ENG|MUN|MEN
+Wilfried Zaha|CIV|MUN|
+Morgan Schneiderlin|FRA|MUN|
+Sergio Romero|ARG|MON MUN|EL
+Eric Bailly|CIV|MUN|EL
+Daniel James|WAL|MUN|
+Tyrell Malacia|NED|MUN|
+Jonny Evans|NIR|MUN|MEN
+Patrick Dorgu|DEN|MUN|
+Carlos Baleba|CMR|MUN|
+Altay Bayındır|TUR|MUN|
+Jesper Olsen|DEN|MUN|
+Ray Wilkins|ENG|CHE MUN MIL PSG|
+Angel Gomes|ENG|MUN OM|
+Anthony Elanga|SWE|MUN|
+Hannibal Mejbri|TUN|MUN|
+Colin Bell|ENG|MCI|MEN
+Francis Lee|ENG|MCI|MEN
+Paulo Wanchope|CRC|MCI|
+Richard Dunne|IRL|MCI|
+Stephen Ireland|IRL|MCI|
+Elano|BRA|MCI|
+Vedran Ćorluka|CRO|MCI TOT|
+Shay Given|IRL|MCI|
+Adam Johnson|ENG|MCI|MEN
+Jack Rodwell|ENG|MCI|MEN
+Javi García|ESP|MCI|MEN
+Oscar Bobb|NOR|MCI|MEN
+Abdukodir Khusanov|UZB|MCI|
+Kazimierz Deyna|POL|MCI|
+Roger Hunt|ENG|LIV|WM MEN
+Ian Callaghan|ENG|LIV|WM CL EL MEN
+Ray Clemence|ENG|LIV TOT|CL EL MEN
+Phil Neal|ENG|LIV|CL EL MEN
+Emlyn Hughes|ENG|LIV|CL EL MEN
+Terry McDermott|ENG|LIV|CL EL MEN
+Ray Kennedy|ENG|ARS LIV|CL EL MEN
+Alan Hansen|SCO|LIV|CL MEN
+Mark Lawrenson|IRL|LIV|CL MEN
+Bruce Grobbelaar|ZIM|LIV|CL MEN
+Ronnie Whelan|IRL|LIV|CL MEN
+Steve Nicol|SCO|LIV|CL MEN
+Peter Beardsley|ENG|LIV|MEN
+John Aldridge|IRL|LIV|MEN
+Steve McMahon|ENG|LIV|MEN
+Ray Houghton|IRL|LIV|MEN
+Jan Mølby|DEN|LIV|MEN
+Jamie Redknapp|ENG|LIV TOT|
+Stéphane Henchoz|SUI|LIV|EL
+Nick Barmby|ENG|TOT LIV|EL
+Danny Murphy|ENG|LIV TOT|EL
+El Hadji Diouf|SEN|LIV|
+Yossi Benayoun|ISR|LIV CHE ARS|
+Andrea Dossena|ITA|LIV NAP|
+Charlie Adam|SCO|LIV|
+Stewart Downing|ENG|LIV|
+Sebastián Coates|URU|LIV|CA
+Fabio Borini|ITA|CHE ROM LIV MIL|
+Joe Allen|WAL|LIV|
+Lazar Marković|SRB|LIV|
+Christian Benteke|BEL|LIV|
+Nathaniel Clyne|ENG|LIV|
+Danny Ings|ENG|LIV|
+Conor Bradley|NIR|LIV|MEN
+Joe Gomez|ENG|LIV|CL MEN
+Dennis Wise|ENG|CHE|
+Graeme Le Saux|ENG|CHE|MEN
+Dan Petrescu|ROU|CHE|
+Chris Sutton|ENG|CHE|MEN
+Mario Stanić|CRO|CHE|EL
+Mario Melchiot|NED|CHE|
+Jesper Grønkjær|DEN|CHE ATM VFB|
+Oriol Romeu|ESP|FCBA CHE|
+Demba Ba|SEN|CHE|
+Davide Zappacosta|ITA|CHE ROM|EL
+Romeo Lavia|BEL|CHE|
+Robert Sánchez|ESP|CHE|
+Jorrel Hato|NED|CHE|
+Trevoh Chalobah|ENG|CHE|
+Celestine Babayaro|NGA|CHE|
+Liam Brady|IRL|ARS JUV INT|MIT
+Pat Jennings|NIR|TOT ARS|EL
+David O'Leary|IRL|ARS|MEN
+Paul Merson|ENG|ARS|MEN
+Anders Limpar|SWE|ARS|MEN
+Steve Bould|ENG|ARS|MEN
+Ray Parlour|ENG|ARS|MEN
+Andrei Arshavin|RUS|ARS|EL
+Marouane Chamakh|MAR|ARS|
+Carlos Vela|MEX|ARS|
+Mathieu Debuchy|FRA|ARS|
+Christos Tzolis|GRE|ARS|
+Rémi Garde|FRA|OL ARS|MEN
+Jimmy Greaves|ENG|CHE TOT MIL|WM
+Martin Chivers|ENG|TOT|EL
+Steve Perryman|ENG|TOT|EL
+Ricardo Villa|ARG|TOT|WM
+Darren Anderton|ENG|TOT|
+Les Ferdinand|ENG|TOT|
+Paul Robinson|ENG|TOT|
+Tom Huddlestone|ENG|TOT|
+Didier Zokora|CIV|TOT SEV|
+Younès Kaboul|FRA|TOT|
+Roman Pavlyuchenko|RUS|TOT|
+Gylfi Sigurðsson|ISL|TOT|
+Ben Davies|WAL|TOT|EL
+Juan Foyth|ARG|TOT|WM EL
+Radu Drăgușin|ROU|TOT|EL
+Antonín Kinský|CZE|TOT|
+Jan Paul van Hecke|NED|TOT|
+Serhiy Rebrov|UKR|TOT|
+Steffen Iversen|NOR|TOT|
+Noureddine Naybet|MAR|TOT|
+Park Chu-young|KOR|MON ARS|
+Roberto Bettega|ITA|JUV|EL MIT
+Franco Causio|ITA|JUV|WM EL MIT
+Roberto Boninsegna|ITA|INT JUV|EL MIT
+Aldo Serena|ITA|INT JUV MIL|MIT
+Salvatore Schillaci|ITA|JUV INT|EL|Totò Schillaci
+Moreno Torricelli|ITA|JUV|CL EL MIT
+Vladimir Jugović|SRB|JUV ATM INT MON|CL MIT
+Michele Padovano|ITA|JUV|CL MIT
+Mark Iuliano|ITA|JUV|MIT
+Igor Tudor|CRO|JUV|MIT
+Marcelo Salas|CHI|JUV|MIT
+Nicola Legrottaglie|ITA|JUV|
+Jonathan Zebina|FRA|ROM JUV|MIT
+Sebastian Giovinco|ITA|JUV|MIT
+Vincenzo Iaquinta|ITA|JUV|WM
+Felipe Melo|BRA|JUV INT|
+Fabio Quagliarella|ITA|NAP JUV|MIT
+Simone Pepe|ITA|JUV|MIT
+Hernanes|BRA|INT JUV|MIT
+Daniele Rugani|ITA|JUV|MIT
+Marko Pjaca|CRO|JUV|MIT
+Nicolò Fagioli|ITA|JUV|
+Jhon Lucumí|COL|JUV|
+Stephen Appiah|GHA|JUV|
+Mario Lemina|GAB|OM JUV|MIT
+Nicklas Bendtner|DEN|ARS JUV WOB|MIT
+Mario Corso|ITA|INT|CL MIT
+Tarcisio Burgnich|ITA|INT|EM CL MIT
+Alessandro Altobelli|ITA|INT JUV|WM MIT
+Gabriele Oriali|ITA|INT|WM MIT
+Riccardo Ferri|ITA|INT|EL MIT
+Ramón Díaz|ARG|NAP INT MON|MIT
+Wim Jonk|NED|INT|EL
+Taribo West|NGA|INT MIL|EL
+Luigi Di Biagio|ITA|ROM INT|
+David Pizarro|CHI|INT ROM MCI|MEN MIT
+Davide Santon|ITA|INT ROM|CL MIT
+Andrea Ranocchia|ITA|INT|MIT
+Giampaolo Pazzini|ITA|INT MIL|
+Yuto Nagatomo|JPN|INT|
+Fredy Guarín|COL|INT|EL
+Gabriel Barbosa|BRA|INT|
+Matías Vecino|URU|INT|MIT
+Borja Valero|ESP|INT|
+Šime Vrsaljko|CRO|ATM INT|EL MES
+Keita Baldé|SEN|MON INT|
+Mehdi Taremi|IRN|INT|
+Tajon Buchanan|CAN|INT|MIT
+Petar Sučić|CRO|INT|MIT
+Álvaro Pereira|URU|INT|CA EL
+Cesare Maldini|ITA|MIL|CL MIT
+Karl-Heinz Schnellinger|GER|ROM MIL|CL MIT
+Fabio Capello|ITA|ROM JUV MIL|MIT
+Daniele Massaro|ITA|MIL|CL MIT
+Stefano Eranio|ITA|MIL|CL MIT
+Gianluigi Lentini|ITA|MIL|CL MIT
+Christian Abbiati|ITA|MIL JUV ATM|CL MIT
+Urby Emanuelson|NED|MIL ROM|MIT
+Giacomo Bonaventura|ITA|MIL|
+Alessio Romagnoli|ITA|ROM MIL|MIT
+Nikola Kalinić|CRO|MIL ATM ROM|
+Lucas Biglia|ARG|MIL|
+Samuel Chukwueze|NGA|MIL|EL
+Ardon Jashari|SUI|MIL|
+Pervis Estupiñán|ECU|MIL|
+Koni De Winter|BEL|MIL|
+Matteo Gabbia|ITA|MIL|MIT
+Dario Šimić|CRO|INT MIL MON|CL MIT
+Martin Laursen|DEN|MIL|CL MIT
+Roque Júnior|BRA|MIL B04|WM CL
+Florin Răducioiu|ROU|MIL|MIT
+Mark Hateley|ENG|MIL MON|MFR
+Salvatore Bagni|ITA|INT NAP|MIT
+Fernando De Napoli|ITA|NAP MIL|EL MIT
+Alemão|BRA|ATM NAP|EL MIT
+Daniel Fonseca|URU|NAP ROM JUV|MIT
+Christian Maggio|ITA|NAP|
+Walter Gargano|URU|NAP INT|CA
+Gökhan Inler|SUI|NAP|
+Juan Camilo Zúñiga|COL|NAP|
+Allan|BRA|NAP|
+Manolo Gabbiadini|ITA|NAP|
+Kostas Manolas|GRE|ROM NAP|
+Juan Jesus|BRA|INT ROM NAP|MIT
+Mário Rui|POR|ROM NAP|MIT
+Jens Cajuste|SWE|NAP|
+David Neres|BRA|NAP|MIT
+Noa Lang|NED|NAP|
+Amir Rrahmani|KOS|NAP|MIT
+Roberto Pruzzo|ITA|ROM|MIT
+Toninho Cerezo|BRA|ROM|MIT
+Giuseppe Giannini|ITA|ROM|
+Abel Balbo|ARG|ROM|EL
+Pablo Osvaldo|ITA|ROM JUV INT|MIT
+Maarten Stekelenburg|NED|ROM MON|
+Michael Bradley|USA|ROM|
+Adem Ljajić|SRB|ROM INT|
+Javier Pastore|ARG|PSG ROM|MFR
+Nicolò Zaniolo|ITA|ROM|
+Robin Olsen|SWE|ROM|
+Roger Ibañez|BRA|ROM|
+Rui Patrício|POR|ROM|EM
+Zeki Çelik|TUR|ROM|
+Evan Ferguson|IRL|ROM|
+Marten de Roon|NED|ROM|EL
+Vasilios Torosidis|GRE|ROM|
+Jonas Thern|SWE|NAP ROM|
+Claudio Caniggia|ARG|ROM|CA
+Dominique Rocheteau|FRA|PSG|EM MFR
+Luis Fernández|FRA|PSG|EM MFR
+Joël Bats|FRA|PSG|EM MFR
+Alain Roche|FRA|OM PSG VAL|MFR
+Paul Le Guen|FRA|PSG|MFR
+Bernard Lama|FRA|PSG|WM MFR
+Mauricio Pochettino|ARG|PSG|
+Christophe Jallet|FRA|PSG OL|MFR
+Abdou Diallo|SEN|MON BVB PSG RBL|MFR
+Danilo Pereira|POR|PSG|EM MFR
+Lucas Beraldo|BRA|PSG|CL MFR
+Matvey Safonov|RUS|PSG|CL MFR
+Marcelo Gallardo|ARG|MON PSG|MFR
+Manuel Amoros|FRA|MON OM OL|EM MFR
+Éric Di Meco|FRA|OM MON|CL MFR
+Jean Tigana|FRA|OL OM|EM MFR
+Alain Giresse|FRA|OM|EM
+Carlos Mozer|BRA|OM|MFR
+Souleymane Diawara|SEN|OM|MFR
+André Ayew|GHA|OM|MFR
+Jordan Ayew|GHA|OM|MFR
+Duje Ćaleta-Car|CRO|OM OL|
+Darío Benedetto|ARG|OM|
+Gerson|BRA|ROM OM|
+Ruslan Malinovskyi|UKR|OM|
+Ismaïla Sarr|SEN|OM|
+Amine Gouiri|ALG|OL OM|
+Bernard Lacombe|FRA|OL|EM
+Vikash Dhorasoo|FRA|OL MIL PSG|MFR
+Éric Carrière|FRA|OL|MFR
+Kim Källström|SWE|OL ARS|MFR
+Jean-Alain Boumsong|FRA|JUV OL|
+Michel Bastos|BRA|OL S04 ROM|
+Clément Grenier|FRA|OL ROM|
+Mapou Yanga-Mbiwa|FRA|ROM OL|
+Bertrand Traoré|BFA|CHE OL|
+Léo Dubois|FRA|OL|
+Karl Toko Ekambi|CMR|OL|
+Saïd Benrahma|ALG|OL|
+Ainsley Maitland-Niles|ENG|ARS ROM OL|
+Tanner Tessmann|USA|OL|
+Hans Hateboer|NED|OL|
+Marc-Vivien Foé|CMR|OL MCI|MFR
+Rui Barros|POR|JUV MON OM|EL
+John Collins|SCO|MON|MFR
+Philippe Christanval|FRA|MON FCBA OM|MFR
+Nabil Dirar|MAR|MON|MFR
+Islam Slimani|ALG|MON|
+Gelson Martins|POR|ATM MON|
+Mohamed Camara|MLI|MON|
+Vanderson|BRA|MON|
+Krépin Diatta|SEN|MON|
+Roger Milla|CMR|MON|
+Garrincha|BRA||WM
+Jairzinho|BRA||WM
+Roberto Rivelino|BRA||WM|Rivelino
+Tostão|BRA||WM
+Carlos Alberto Torres|BRA||WM
+Mário Zagallo|BRA||WM
+Cláudio Taffarel|BRA||WM EL|Taffarel
+Branco|BRA||WM
+Márcio Santos|BRA||WM
+Mauro Silva|BRA||WM
+Vampeta|BRA|INT PSG|WM
+Denílson|BRA||WM CA
+Luizão|BRA||WM
+Daniel Passarella|ARG|INT|WM
+Jorge Burruchaga|ARG||WM
+Nery Pumpido|ARG||WM
+Ariel Ortega|ARG|VAL|
+Germán Pezzella|ARG||WM CA
+Guido Rodríguez|ARG||WM CA
+Franco Armani|ARG||WM CA
+Lucas Martínez Quarta|ARG||CA
+Valentín Barco|ARG|SEV CHE|CA
+Diego Lugano|URU|PSG|CA
+Fernando Muslera|URU||CA
+Maxi Pereira|URU||CA
+Eduardo Vargas|CHI|NAP VAL|CA
+Jean Beausejour|CHI||CA
+Marcelo Díaz|CHI||CA
+Gonzalo Jara|CHI||CA
+Jorge Valdivia|CHI||CA
+Faustino Asprilla|COL||EL
+Benni McCarthy|RSA||CL
+Kim Vilfort|DEN||EM
+John Jensen|DEN|ARS|EM
+Mikael Forssell|FIN|CHE BMG|
+Gheorghe Popescu|ROU|TOT FCBA|EL
+David Ospina|COL|ARS NAP|
+Michael Rummenigge|GER|FCB BVB|MDE
+Pierre Littbarski|GER||WM
+Andreas Köpke|GER|SGE OM|WM EM
+Raimond Aumann|GER|FCB|WM MDE
+Hans Pflügler|GER|FCB|WM MDE
+Dieter Eilts|GER||EM
+Marco Bode|GER||EM
+Stefan Kuntz|GER||EM
+Ron-Robert Zieler|GER||WM
+Jupp Kapellmann|GER|FCB|WM CL MDE
+Wolfgang Overath|GER||WM
+Heinz Flohe|GER||WM
+Harald Schumacher|GER||EM|Toni Schumacher
+Hans-Peter Briegel|GER||EM
+Manfred Kaltz|GER||EM CL
+Horst Hrubesch|GER||EM CL
+Bernard Dietz|GER||EM
+Felix Magath|GER||EM CL
+Stéphane Guivarc'h|FRA||WM
+Bernard Diomède|FRA|LIV|WM
+Johan Micoud|FRA||EM
+Andrés Palop|ESP|VAL SEV|EM EL
+Fernando Navarro|ESP|SEV|EM EL
+Daniel Güiza|ESP||EM
+Álex Remiro|ESP||EM
+Dani Vivian|ESP||EM
+Ayoze Pérez|ESP||EM
+Marco Amelia|ITA|MIL CHE|WM MIT
+Simone Barone|ITA||WM
+Rafael Tolói|ITA||EM EL
+Matteo Pessina|ITA||EM
+Domenico Berardi|ITA||EM
+José Luis Brown|ARG||WM
+Jack Charlton|ENG||WM
+Alan Ball|ENG|ARS|WM
+Martin Peters|ENG|TOT|WM EL
+George Cohen|ENG||WM
+Ray Wilson|ENG||WM
+Hans van Breukelen|NED||EM CL
+Berry van Aerle|NED||EM CL
+Gerald Vanenburg|NED||EM CL
+Jan Wouters|NED|FCB|EM MDE
+Erwin Koeman|NED||EM
+Arnold Mühren|NED|MUN|EM EL
+José Fonte|POR||EM
+Bruno Alves|POR||EM
+William Carvalho|POR||EM
+Adrien Silva|POR|MON|EM
+Rafa Silva|POR||EM
+Éder|POR||EM
+Giourkas Seitaridis|GRE|ATM|EM
+Kostas Katsouranis|GRE||EM
+Theodoros Zagorakis|GRE||EM
+Stelios Giannakopoulos|GRE||EM
+Torben Piechnik|DEN|LIV|EM
+Lars Olsen|DEN||EM
+Nuno Valente|POR||CL EL
+Pedro Mendes|POR|TOT|CL EL
+Jorge Costa|POR||CL EL
+Dmitri Alenichev|RUS|ROM|CL EL
+Danny Blind|NED||CL EL
+Finidi George|NGA||CL
+Winston Bogarde|NED|MIL FCBA CHE|CL MES
+Darko Pančev|MKD|INT|CL
+Miodrag Belodedici|ROU|VAL|CL
+Marius Lăcătuș|ROU||CL
+Rabah Madjer|ALG|VAL|CL
+Peter Shilton|ENG||CL
+Trevor Francis|ENG|MCI|CL
+Viv Anderson|ENG|ARS MUN|CL
+John Robertson|SCO||CL
+Peter Withe|ENG||CL
+Djimi Traoré|MLI|LIV|CL
+Igor Bišćan|CRO|LIV|CL
+Ryan Bertrand|ENG|CHE|CL EL
+Martín Montoya|ESP|FCBA INT VAL|CL MES
+Cristian Brocchi|ITA|INT MIL|CL
+Pietro Vierchowod|ITA|ROM JUV|WM CL MIT
+Gianluca Pessotto|ITA|JUV|CL MIT
+Angelo Di Livio|ITA|JUV|CL MIT
+Pierluigi Casiraghi|ITA|JUV CHE|EL
+Shinji Ono|JPN||EL
+Frans Thijssen|NED||EL
+John Toshack|WAL|LIV|EL MEN
+Juan Cabal|COL|JUV|
+Samuele Ricci|ITA|MIL|
+Vanja Milinković-Savić|SRB|NAP|
+Mile Svilar|SRB|ROM|
+Wesley França|BRA|ROM|
+Mohammed Salisu|GHA|MON|
+Charles De Ketelaere|BEL|MIL|EL
+Jobe Bellingham||BVB|
+Mike Summerbee|ENG|MCI|MEN
+Mike Doyle|ENG|MCI|MEN
+Joe Corrigan|ENG|MCI|
+Rodney Marsh|ENG|MCI|
+Dennis Tueart|ENG|MCI|
+Peter Barnes|ENG|MCI MUN|
+Dave Watson|ENG|MCI|
+Mick Channon|ENG|MCI|
+Brian Kidd|ENG|MUN ARS MCI|CL
+Peter Reid|ENG|MCI|MEN
+David White|ENG|MCI|
+Keith Curle|ENG|MCI|
+Paul Stewart|ENG|MCI TOT LIV|
+Nigel Clough|ENG|LIV MCI|
+Paul Walsh|ENG|LIV TOT MCI|
+Steve Howey|ENG|MCI|
+Stuart Pearce|ENG|MCI|
+David James|ENG|LIV MCI|
+Danny Mills|ENG|MCI|
+Trevor Sinclair|ENG|MCI|
+Darius Vassell|ENG|MCI|
+Joey Barton|ENG|MCI OM|
+Michael Ball|ENG|MCI|
+Don Revie|ENG|MCI|
+Frank Swift|ENG|MCI|MEN`;
+
+const BASE_URL = location.href.split('#')[0];
+const norm = s => s.toLowerCase().replace(/ø/g,'o').replace(/ß/g,'ss').replace(/đ/g,'d').replace(/ı/g,'i')
+  .normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
+const DB = RAW.split('\n').map((line,id)=>{
+  const [name,nat,clubs,titles,alias] = line.split('|');
+  const keys = [name].concat(alias? alias.split(';'):[]);
+  return {id,name,nat,clubs:clubs.split(' ').filter(Boolean),titles:(titles||'').split(' ').filter(Boolean),
+    n:keys.map(norm), words:keys.join(' ').split(/[\s-]+/).map(norm).filter(Boolean)};
+});
+document.querySelectorAll('.dbnote').forEach(el=>el.textContent=`Datenbank: ${DB.length} Spieler, Stand November 2026. Fehlt jemand, entscheidet der Gegner.`);
+const fits = (p,c) => { const t=CATS[c][0]; return t==='club'? p.clubs.includes(c) : t==='nat'? p.nat===c : p.titles.includes(c); };
+const $ = id => document.getElementById(id);
+const label = c => CATS[c][1];
+const esc = s => String(s).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[ch]);
+const short = n => { const w=n.split(' '); return w.length>2? w.slice(-2).join(' ') : n; };
+const opp = R => R==='X'?'O':'X';
+const cleanName = s => String(s||'').replace(/[\u0000-\u001f\u007f-\u009f­​-‏‪-‮⁠-⁯﻿-]/g,'').trim().slice(0,40);
+const DIFFS=['Leicht','Mittel','Schwer'];
+
+// ---------- Zufall mit Startwert (beide Geräte erzeugen dasselbe Raster) ----------
+function seedOf(str){ let h=1779033703^str.length; for(let i=0;i<str.length;i++){ h=Math.imul(h^str.charCodeAt(i),3432918353); h=h<<13|h>>>19; } h=Math.imul(h^h>>>16,2246822507); h=Math.imul(h^h>>>13,3266489909); return (h^h>>>16)>>>0; }
+function rng(str){ let a=seedOf(str); return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+const shuffle = (arr,rnd=Math.random) => { const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const randId = () => { let s=''; const c='abcdefghijkmnpqrstuvwxyz23456789'; for(let i=0;i<8;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; };
+
+// ---------- Raster ----------
+const answersFor = (r,c) => DB.filter(p=>fits(p,r)&&fits(p,c));
+const gridMemo = new Map();
+function getGrid(seed,diff){
+  const key=seed+'|'+diff; if(gridMemo.has(key)) return gridMemo.get(key);
+  const rnd=rng(key), MIN=[4,2,1][diff];
+  const keys=Object.keys(CATS), clubs=keys.filter(k=>CATS[k][0]==='club'), nats=keys.filter(k=>CATS[k][0]==='nat'), titles=keys.filter(k=>CATS[k][0]==='title');
+  let out=null;
+  for(let tries=0;tries<6000&&!out;tries++){
+    const nN=1+(rnd()<.45?1:0), nT=1+(rnd()<.5?1:0), nC=6-nN-nT;
+    const all=shuffle(shuffle(clubs,rnd).slice(0,nC).concat(shuffle(nats,rnd).slice(0,nN),shuffle(titles,rnd).slice(0,nT)),rnd);
+    const rows=all.slice(0,3), cols=all.slice(3), cache=[];
+    let ok=true;
+    for(const r of rows){ for(const c of cols){ const a=answersFor(r,c); if(a.length<MIN){ok=false;break;} cache.push(a);} if(!ok)break; }
+    if(ok) out={rows,cols,cache};
+  }
+  if(!out){ const rows=['FCB','RMA','ESP'], cols=['GER','CL','FCBA'], cache=[]; for(const r of rows) for(const c of cols) cache.push(answersFor(r,c)); out={rows,cols,cache}; }
+  gridMemo.set(key,out); return out;
+}
+
+// ---------- Zustand: alles ergibt sich aus dem Zug-Protokoll ----------
+const S = { screen:'menu', mode:null, diff:1, timer:45, first:'X', coinBusy:false, coinShown:false, choice:null, gid:'', r:0, sc:[0,0,0], log:[], role:null, showCnt:true,
+  sel:null, pick:null, local:null, msg:'', solOpen:false,
+  room:null, conn:'', peers:[], opp:false, host:false, myPeer:null };
+const LINES=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+function checkOver(g){
+  for(const L of LINES){ const [a,b,c]=L, p=g.board[a]&&g.board[a].p; if(p&&g.board[b]?.p===p&&g.board[c]?.p===p){ g.over={w:p,line:L}; return true; } }
+  if(g.board.every(Boolean)){ g.over={w:null,line:[]}; return true; }
+  return false;
+}
+function doReveal(g){
+  g.pending=null;
+  const rnd=rng(S.gid+'-'+S.r+'-loesung'), taken=new Set(g.used);
+  const open=[...Array(9).keys()].filter(i=>!g.board[i]).sort((a,b)=>g.cache[a].length-g.cache[b].length||a-b);
+  for(const i of open){ const p=shuffle(g.cache[i],rnd).find(x=>!taken.has(x.id)); if(p) taken.add(p.id); g.board[i]={p:null,rev:true,name:p?p.name:''}; }
+  g.over={w:null,line:[],rev:true};
+}
+function applyEntry(g,e){
+  if(!Array.isArray(e)) return;
+  const [k,R]=e; if(R!=='X'&&R!=='O') return;
+  if(k==='v'){ doReveal(g); g.last={k,R}; return; }
+  if(k==='vr'){ if(g.revealReq||g.pending||g.reqUsed.includes(R)) return; g.revealReq={R}; g.reqUsed.push(R); g.last={k,R}; return; }
+  if(k==='va'){ if(!g.revealReq||R===g.revealReq.R) return; const by=g.revealReq.R; g.revealReq=null; if(e[2]===true){ doReveal(g); g.last={k:'v',R:by}; } else g.last={k:'vn',R}; return; }
+  if(g.revealReq) return;
+  if(g.pending){
+    if(k!=='j'||R===g.pending.R) return;
+    const pd=g.pending; g.pending=null;
+    if(e[2]===true){ g.board[pd.i]={p:pd.R,name:pd.name}; if(pd.id!=null) g.used.add(pd.id); g.last={k:'jy',R:pd.R,i:pd.i,name:pd.name}; if(!checkOver(g)) g.turn=opp(g.turn); }
+    else { g.last={k:'jn',R:pd.R,i:pd.i,name:pd.name}; g.turn=opp(g.turn); }
+    return;
+  }
+  if(R!==g.turn) return;
+  if(k==='p'){ g.last={k,R}; g.turn=opp(R); return; }
+  if(k==='z'){ g.last={k,R}; g.turn=opp(R); return; }
+  const i=e[2]; if(!Number.isInteger(i)||i<0||i>8||g.board[i]) return;
+  const r=g.rows[Math.floor(i/3)], c=g.cols[i%3];
+  if(k==='c'){ const p=DB[e[3]]; if(!p||!fits(p,r)||!fits(p,c)||g.used.has(p.id)) return; g.board[i]={p:R,name:p.name}; g.used.add(p.id); g.last={k,R,i,name:p.name}; if(!checkOver(g)) g.turn=opp(R); return; }
+  if(k==='m'){ const p=e[3]==null?null:DB[e[3]]; g.last={k,R,i,name:p?p.name:null}; g.turn=opp(R); return; }
+  if(k==='d'){ const p=DB[e[3]]; g.last={k,R,i,name:p?p.name:''}; g.turn=opp(R); return; }
+  if(k==='u'){ const name=cleanName(e[3]); if(!name) return; g.pending={R,i,name,id:null,kind:'u'}; g.last={k,R,i,name}; return; }
+  if(k==='a'){ const p=DB[e[3]]; if(!p||g.used.has(p.id)) return; g.pending={R,i,name:p.name,id:p.id,kind:'a'}; g.last={k,R,i,name:p.name}; return; }
+}
+function derive(){
+  const grid=getGrid(S.gid+'-'+S.r,S.diff);
+  const g={rows:grid.rows,cols:grid.cols,cache:grid.cache,board:Array(9).fill(null),used:new Set(),turn:S.r%2===0?S.first:opp(S.first),pending:null,over:null,last:null,revealReq:null,reqUsed:[]};
+  for(const e of S.log){ if(g.over) break; applyEntry(g,e); }
+  return g;
+}
+const addResult = (sc,over) => { const s=sc.slice(); if(over){ if(over.w==='X')s[0]++; else if(over.w==='O')s[1]++; else s[2]++; } return s; };
+
+// ---------- Wer darf was ----------
+function myTurn(g){
+  if(S.coinBusy||g.over||g.pending||g.revealReq) return false;
+  if(S.mode==='local') return true;
+  if(S.mode==='cpu') return g.turn==='X';
+  return S.role===g.turn && S.opp;
+}
+function canJudge(g){
+  if(!g.pending) return false;
+  if(S.mode==='local') return true;
+  if(S.mode==='cpu') return g.pending.R==='X';
+  return S.opp && S.role===opp(g.pending.R);
+}
+const isPlayer = () => S.mode!=='online' || ((S.role==='X'||S.role==='O') && S.opp);
+function nameFor(R){
+  if(S.mode==='local') return 'Spieler '+R;
+  if(S.mode==='cpu') return R==='X'?'Du':'Computer';
+  if(S.role==='X'||S.role==='O') return R===S.role?'Du':'Dein Freund';
+  return 'Spieler '+R;
+}
+
+function act(e){
+  S.log=S.log.concat([e]);
+  if(e[0]!=='vr'&&e[0]!=='va'){ S.sel=null; S.local=null; S.msg=''; S.pick=null; S.choice=null; }
+  publish(); render(); scheduleCpu();
+}
+
+// ---------- Darstellung ----------
+function chip(c){
+  const d=CATS[c];
+  if(d[0]==='club') return `<span class="chip" style="background:linear-gradient(135deg,${d[3]} 0 50%,${d[4]} 50%)"></span>`;
+  if(d[0]==='nat'){
+    if(c==='BRA') return `<span class="chip flag" style="background:#009c3b;position:relative;overflow:hidden"><span style="position:absolute;inset:3px 6px;background:#ffdf00;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)"></span><span style="position:absolute;left:50%;top:50%;width:7px;height:7px;margin:-3.5px;border-radius:50%;background:#002776"></span></span>`;
+    return `<span class="chip flag" style="background:${FLAGS[c]}"></span>`;
+  }
+  return `<svg class="chip cup" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 3h10v2h3v2.5a4.5 4.5 0 0 1-4.1 4.48A5 5 0 0 1 13 14.9V18h3v3H8v-3h3v-3.1a5 5 0 0 1-2.9-2.92A4.5 4.5 0 0 1 4 7.5V5h3V3Zm-1 4v.5a2.5 2.5 0 0 0 1.5 2.29A5 5 0 0 1 7 8V7H6Zm11 0v1a5 5 0 0 1-.5 1.79A2.5 2.5 0 0 0 18 7.5V7h-1Z"/></svg>`;
+}
+const typeLabel = c => ({club:'Verein',nat:'Nation',title:'Titel'})[CATS[c][0]];
+const cellName = (g,i) => `${label(g.rows[Math.floor(i/3)])} × ${label(g.cols[i%3])}`;
+const pqHtml = (g,i) => { const r=g.rows[Math.floor(i/3)], c=g.cols[i%3]; return `${chip(r)}<span>${label(r)}</span><span class="times">×</span>${chip(c)}<span>${label(c)}</span>`; };
+
+function render(){
+  $('menu').hidden = S.screen!=='menu';
+  $('game').hidden = S.screen!=='game';
+  if(S.screen!=='game') return;
+  const g=derive();
+  if(S.sel!=null && !g.revealReq && (!myTurn(g)||g.board[S.sel])){ S.sel=null; S.local=null; S.msg=''; S.choice=null; }
+  // Kopf
+  $('modeLabel').textContent = ({local:'Zu zweit an einem Handy',cpu:'Gegen den Computer',online:'Online gegen einen Freund'})[S.mode]+' · '+DIFFS[S.diff]+(S.timer?' · '+S.timer+' Sek.':'');
+  const tot=addResult(S.sc,g.over);
+  $('score').textContent=`${tot[0]} : ${tot[1]}`; $('draws').textContent=`${tot[2]} Remis`;
+  $('nX').textContent=nameFor('X'); $('nO').textContent=nameFor('O');
+  $('sX').classList.toggle('on',!g.over&&!g.pending&&g.turn==='X');
+  $('sO').classList.toggle('on',!g.over&&!g.pending&&g.turn==='O');
+  renderOnline();
+  // Raster
+  const winLine=g.over?g.over.line:[];
+  let h=`<div class="corner"><span class="mk ${g.turn}">${g.over?'':g.turn}</span></div>`;
+  for(const c of g.cols) h+=`<div class="head" title="${CATS[c][2]}">${chip(c)}<span class="hl">${label(c)}</span><span class="ht">${typeLabel(c)}</span></div>`;
+  const mine=myTurn(g);
+  g.rows.forEach((r,ri)=>{
+    h+=`<div class="head" title="${CATS[r][2]}">${chip(r)}<span class="hl">${label(r)}</span><span class="ht">${typeLabel(r)}</span></div>`;
+    g.cols.forEach((c,ci)=>{
+      const i=ri*3+ci, b=g.board[i], left=g.cache[i].filter(p=>!g.used.has(p.id)).length;
+      const cls=['cell']; if(S.sel===i)cls.push('sel'); if(winLine.includes(i))cls.push('win'); if(b&&b.rev)cls.push('revealed'); if(g.pending&&g.pending.i===i)cls.push('ask');
+      h+=`<button class="${cls.join(' ')}" data-i="${i}" ${b||!mine||S.local||S.choice?'disabled':''} aria-label="${label(r)} und ${label(c)}${b?(b.rev?', Lösung: '+esc(b.name||'keine'):', belegt von '+b.p+' mit '+esc(b.name)):''}">`;
+      if(S.showCnt&&!b) h+=`<span class="cnt">${left}</span>`;
+      h+= b ? (b.rev ? (b.name?`<span class="rtag">Lösung</span><span class="who rev">${esc(short(b.name))}</span>`:`<span class="none">keine Lösung</span>`)
+              : `<span class="big ${b.p}">${b.p}</span><span class="who">${esc(short(b.name))}</span>`) : `<span class="plus">${g.pending&&g.pending.i===i?'?':'+'}</span>`;
+      h+=`</button>`;
+    });
+  });
+  $('grid').innerHTML=h;
+  renderPanel(g); renderEnd(g);
+  // Aktionen
+  $('actions').hidden=!!g.over;
+  $('pass').disabled=!mine;
+  const reqR=S.mode==='online'?S.role:(S.mode==='cpu'?'X':g.turn);
+  $('reveal').disabled=!!g.over||!isPlayer()||!!g.pending||!!g.revealReq||g.reqUsed.includes(reqR)||S.coinBusy;
+  $('newgrid').hidden=S.mode==='online';
+  $('ticker').innerHTML=tickerText(g);
+  tickClock(true);
+}
+
+function tickerText(g){
+  if(S.mode==='online' && !(S.opp && (S.role==='X'||S.role==='O')) && S.role!=='S') return '';
+  const L=g.last;
+  if(!L) return `<b>${nameFor(g.turn)}</b> ${S.mode==='local'||S.role==='S'?'beginnt':(nameFor(g.turn)==='Du'?'beginnst':'beginnt')}. ${myTurn(g)?'Wähle ein Feld.':''}`;
+  const who=nameFor(L.R), next=g.over?'':` <b>${nameFor(g.turn)}</b> ${nameFor(g.turn)==='Du'?'bist':'ist'} dran.`;
+  switch(L.k){
+    case 'c': return `<b>${esc(L.name)}</b> passt zu ${cellName(g,L.i)} – Feld für ${L.R}.${next}`;
+    case 'm': return L.name ? `<b>${esc(L.name)}</b> passt nicht zu ${cellName(g,L.i)}.${next}` : `${who} ${who==='Du'?'findest':'findet'} keinen Spieler für ${cellName(g,L.i)}.${next}`;
+    case 'u': case 'a': return `<b>${esc(L.name)}</b> für ${cellName(g,L.i)}: Die Entscheidung ist offen.`;
+    case 'jy': return `<b>${esc(L.name)}</b> wurde anerkannt – Feld für ${L.R}.${next}`;
+    case 'jn': return `<b>${esc(L.name)}</b> wurde abgelehnt.${next}`;
+    case 'p': return `${who} ${who==='Du'?'passt':'passt'}.${next}`;
+    case 'v': return 'Aufgelöst: Die freien Felder zeigen je einen passenden Spieler.';
+    case 'vr': return who==='Du'?'Du hast gefragt, ob ihr auflösen wollt.':`<b>${esc(who)}</b> fragt, ob ihr auflösen wollt.`;
+    case 'vn': return (who==='Du'?'Du willst weiterspielen.':`<b>${esc(who)}</b> will weiterspielen.`)+next;
+    case 'd': return `<b>${esc(L.name)}</b> wurde schon genannt – Zug vorbei.${next}`;
+    case 'z': return (who==='Du'?'Deine Zeit ist abgelaufen.':`Die Zeit für ${who==='Dein Freund'?'deinen Freund':who} ist abgelaufen.`)+next;
+  }
+  return '';
+}
+
+function renderPanel(g){
+  const panel=$('panel');
+  if(g.over){ panel.hidden=true; return; }
+  if(g.revealReq){
+    const by=g.revealReq.R, other=opp(by);
+    panel.hidden=false; $('pq').innerHTML='<span>Auflösen?</span>'; $('form').hidden=true; $('sugg').innerHTML=''; $('cancelRow').hidden=true;
+    const canAnswer = S.mode==='local' || (S.mode==='online' && S.opp && S.role===other);
+    let q;
+    if(canAnswer) q=(S.mode==='local'?`Spieler ${by} möchte die Runde auflösen. Spieler ${other}, bist du einverstanden?`:'Dein Freund möchte die Runde auflösen. Bist du einverstanden?')
+      +`</span><span class="facts">Die Runde endet dann unentschieden, und jedes freie Feld zeigt einen passenden Spieler.</span><div class="row-btns"><button class="btn small" data-act="vy">Ja, auflösen</button><button class="btn ghost small" data-act="vno">Nein, weiterspielen</button></div><span>`;
+    else if(S.mode==='cpu') q='Du möchtest auflösen. Der Computer überlegt …';
+    else if(S.role==='S') q=`Spieler ${by} möchte auflösen.`;
+    else q='Anfrage gesendet. Warte auf die Antwort deines Freundes …';
+    $('verdict').innerHTML=`<span>${q}</span>`;
+    return;
+  }
+  if(g.pending){
+    const pd=g.pending; panel.hidden=false;
+    $('pq').innerHTML=pqHtml(g,pd.i); $('form').hidden=true; $('sugg').innerHTML=''; $('cancelRow').hidden=true;
+    const intro = pd.kind==='u' ? `„${esc(pd.name)}“ kennt die Datenbank nicht.` : `${esc(pd.name)} passt laut Datenbank nicht. ${nameFor(pd.R)} ${nameFor(pd.R)==='Du'?'legst':'legt'} Einspruch ein.`;
+    let q;
+    if(canJudge(g)){
+      q = S.mode==='cpu' ? 'Ehrlich: Passt der Spieler?' : S.mode==='local' ? `${nameFor(opp(pd.R))} entscheidet: Gilt der Spieler?` : 'Du entscheidest: Gilt der Spieler?';
+      $('verdict').innerHTML=`<span>${intro} ${q}</span><div class="row-btns"><button class="btn small" data-act="jy">Gilt</button><button class="btn ghost small" data-act="jn">Gilt nicht</button></div>`;
+    } else {
+      $('verdict').innerHTML=`<span>${intro} Warte auf die Entscheidung von ${S.role==='S'?'Spieler '+opp(pd.R):'deinem Freund'} …</span>`;
+    }
+    return;
+  }
+  if(S.sel==null){ panel.hidden=true; return; }
+  panel.hidden=false; $('cancelRow').hidden=!!(S.local||S.choice);
+  $('pq').innerHTML=pqHtml(g,S.sel);
+  if(S.local){
+    const p=DB[S.local.id];
+    $('form').hidden=true; $('sugg').innerHTML='';
+    $('verdict').innerHTML=S.local.used ? `<span class="bad">${esc(p.name)} wurde in dieser Runde schon genannt. Dein Zug ist vorbei.</span><div class="row-btns"><button class="btn small" data-act="miss">OK</button></div>` : `<span class="bad">${esc(p.name)} passt laut Datenbank nicht.</span><span class="facts">${esc(facts(p))}</span>
+      <div class="row-btns"><button class="btn small" data-act="miss">OK, Zug vorbei</button><button class="btn ghost small" data-act="appeal">Einspruch: gilt doch</button></div>`;
+  } else {
+    if(S.choice){
+      const ch=S.choice;
+      $('form').hidden=true; $('sugg').innerHTML='';
+      $('verdict').innerHTML=`<span>${ch.kind==='multi'?`Mehrere Spieler passen zu „${esc(ch.q)}“. Welchen meinst du?`:`„${esc(ch.q)}“ kennt die Datenbank so nicht. Meintest du:`}</span><div class="row-btns">${ch.ids.map(id=>`<button class="btn small" data-act="pick" data-id="${id}">${esc(DB[id].name)}</button>`).join('')}<button class="btn ghost small" data-act="none">Keiner davon</button></div>`;
+    } else {
+      $('form').hidden=false;
+      $('verdict').innerHTML=S.msg?`<span class="bad">${S.msg}</span>`:'';
+    }
+  }
+}
+
+function renderEnd(g){
+  const end=$('end');
+  if(!g.over){ end.hidden=true; S.solOpen=false; return; }
+  end.hidden=false;
+  let t;
+  if(g.over.rev) t='Aufgelöst – Unentschieden.';
+  else if(!g.over.w) t='Unentschieden.';
+  else if(S.mode==='local'||S.role==='S') t=`Spieler ${g.over.w} gewinnt!`;
+  else t = nameFor(g.over.w)==='Du' ? 'Du gewinnst!' : (S.mode==='cpu'?'Der Computer gewinnt.':'Dein Freund gewinnt.');
+  $('endTitle').textContent=t;
+  $('next').hidden = !isPlayer();
+  $('endNote').textContent = S.mode==='online' ? 'Wer zuerst auf „Nächste Runde“ tippt, startet sie für beide.' : '';
+  $('showSol').textContent=S.solOpen?'Lösungen ausblenden':'Lösungen zeigen';
+  const box=$('sol'); box.hidden=!S.solOpen;
+  if(S.solOpen){
+    let h='';
+    g.rows.forEach((r,ri)=>g.cols.forEach((c,ci)=>{
+      const a=g.cache[ri*3+ci], names=shuffle(a,rng(S.gid+S.r+'s'+ri+ci)).slice(0,6).map(p=>p.name);
+      h+=`<div><b>${label(r)} × ${label(c)}</b><br><span>${esc(names.join(', '))}${a.length>6?` und ${a.length-6} weitere`:''}</span></div>`;
+    }));
+    box.innerHTML=h;
+  }
+}
+
+function renderOnline(){
+  const box=$('online');
+  if(S.mode!=='online'){ box.hidden=true; return; }
+  box.hidden=false;
+  const link=`${BASE_URL}#spiel-${S.gid}-${S.diff}-${S.timer}`;
+  if($('linkInput').value!==link) $('linkInput').value=link;
+  let st='', note='', showLink=S.host, ok=false;
+  if(S.conn==='unavailable'){
+    st='Online-Spiel ist in diesem Browser nicht möglich.'; note='Probier einen aktuellen Browser wie Chrome, Safari oder Firefox.'; showLink=false;
+  } else if(S.conn==='full'){
+    st='Dieses Spiel ist schon voll.'; note='Bitte deinen Freund um einen neuen Link oder starte selbst ein Spiel im Menü.'; showLink=false;
+  } else if(S.opp){
+    st=`<span class="dot live"></span>Verbunden – du spielst ${S.role}.`; showLink=false; ok=true;
+  } else if(S.conn==='error'){
+    st='Verbindung gestört, neuer Versuch läuft …'; note='Klappt es dauerhaft nicht, wechselt kurz ins WLAN.';
+  } else if(S.host){
+    st=S.conn==='ready'?`<span class="dot"></span>Warte auf deinen Freund …`:'Spiel wird vorbereitet …';
+    note='Schick ihm den Link. Lass diese Seite offen, bis er da ist.';
+  } else {
+    st=S.conn==='waitHost'?'Dein Freund ist gerade nicht im Spiel. Neuer Versuch läuft …':'Verbinde mit deinem Freund …';
+    note='Er muss das Spiel bei sich geöffnet haben.';
+  }
+  box.classList.toggle('ok',ok);
+  $('onStatus').innerHTML=st; $('onNote').textContent=note; $('onNote').hidden=!note; $('linkRow').hidden=!showLink;
+}
+
+// ---------- Eingabe ----------
+function search(q){
+  const n=norm(q); if(n.length<2) return [];
+  const res=[];
+  for(const p of DB){
+    let s=-1;
+    if(p.n.includes(n)) s=3; else if(p.words.includes(n)) s=2; else if(p.words.some(w=>w.startsWith(n))) s=1; else if(p.n.some(k=>k.includes(n))) s=0;
+    if(s>=0) res.push([s,p]);
+  }
+  return res.sort((a,b)=>b[0]-a[0]||a[1].name.localeCompare(b[1].name)).map(x=>x[1]);
+}
+// Ähnliche Namen finden: vereinfachte Aussprache, dann Editierdistanz je Namensteil
+const phon = w => w.replace(/ph/g,'f').replace(/[yj]/g,'i').replace(/[cqg]/g,'k').replace(/z/g,'s').replace(/w/g,'v').replace(/h/g,'').replace(/(.)\1+/g,'$1');
+function osa(a,b){
+  const m=a.length, n=b.length; if(!m) return n; if(!n) return m;
+  let p2=null, p1=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){
+    const c=[i];
+    for(let j=1;j<=n;j++){
+      let v=Math.min(p1[j]+1, c[j-1]+1, p1[j-1]+(a[i-1]===b[j-1]?0:1));
+      if(i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1]) v=Math.min(v,p2[j-2]+1);
+      c.push(v);
+    }
+    p2=p1; p1=c;
+  }
+  return p1[n];
+}
+function fuzzy(q){
+  const qt=q.split(/[\s-]+/).map(norm).filter(w=>w.length>=2).map(phon).filter(Boolean);
+  if(!qt.length || qt.join('').length<4) return [];
+  const out=[];
+  for(const p of DB){
+    if(!p.ph) p.ph=p.words.map(phon);
+    let sum=0, ok=true;
+    for(const t of qt){
+      let best=1;
+      for(const w of p.ph){ const d=osa(t,w)/Math.max(t.length,w.length); if(d<best) best=d; if(!best) break; }
+      if(best>0.5){ ok=false; break; }
+      sum+=best;
+    }
+    if(ok && sum/qt.length<=0.34) out.push([sum/qt.length,p]);
+  }
+  return out.sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+}
+function suggestList(q){
+  const s=search(q).slice(0,7);
+  if(s.length<3 && norm(q).length>=4){ for(const p of fuzzy(q)){ if(s.length>=7) break; if(!s.includes(p)) s.push(p); } }
+  return s;
+}
+function showSugg(){
+  const used=derive().used;
+  $('sugg').innerHTML=suggestList($('answer').value).map(p=>`<li><button type="button" data-id="${p.id}" class="${used.has(p.id)?'used':''}${S.pick===p.id?' pick':''}">${esc(p.name)}</button></li>`).join('');
+}
+function resolve(q){
+  if(S.pick!=null && norm(DB[S.pick].name)===norm(q)) return {p:DB[S.pick]};
+  const n=norm(q); if(!n) return {unknown:true};
+  const exact=DB.filter(p=>p.n.includes(n));
+  const word=DB.filter(p=>!exact.includes(p) && p.words.includes(n));
+  const both=exact.concat(word);
+  if(both.length===1) return {p:both[0]};
+  if(both.length>1) return {multi:both};
+  const s=search(q); if(s.length===1&&n.length>=4) return {p:s[0]}; if(s.length>1&&n.length>=4) return {multi:s};
+  return {unknown:true};
+}
+function facts(p){
+  return `${NATNAME[p.nat]||'kein A-Nationalspieler'} · ${p.clubs.map(label).join(', ')||'kein Verein der Auswahl'} · ${p.titles.map(label).join(', ')||'keine der Titel'}`;
+}
+function openPanel(i){
+  S.sel=i; S.pick=null; S.local=null; S.msg=''; S.choice=null;
+  $('answer').value=''; $('sugg').innerHTML='';
+  render();
+  $('answer').focus({preventScroll:true});
+  $('panel').scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+function submit(){
+  const g=derive(); if(S.sel==null||!myTurn(g)||S.local||S.choice) return;
+  const q=$('answer').value.trim(); if(!q) return;
+  const i=S.sel, mover=g.turn, res=resolve(q);
+  if(res.multi){ S.choice={kind:'multi',q,ids:res.multi.slice(0,8).map(p=>p.id)}; render(); return; }
+  if(res.unknown){
+    const fz=fuzzy(q).slice(0,5);
+    if(fz.length){ S.choice={kind:'fuzzy',q,ids:fz.map(p=>p.id)}; render(); return; }
+    act(['u',mover,i,cleanName(q)]); return;
+  }
+  const p=res.p;
+  if(g.used.has(p.id)){ S.local={i,id:p.id,used:true}; render(); return; }
+  if(fits(p,g.rows[Math.floor(i/3)])&&fits(p,g.cols[i%3])){ act(['c',mover,i,p.id]); return; }
+  S.local={i,id:p.id}; render();
+}
+
+// ---------- Computer ----------
+let cpuT=null;
+let cpuA=null;
+function scheduleCpu(){
+  if(S.mode!=='cpu'||S.coinBusy) return;
+  const g=derive();
+  if(g.revealReq){
+    if(g.revealReq.R==='X' && !cpuA) cpuA=setTimeout(()=>{ cpuA=null; const h=derive(); if(S.mode==='cpu' && h.revealReq && h.revealReq.R==='X') act(['va','O',true]); },1300);
+    return;
+  }
+  if(cpuT||g.over||g.pending||g.turn!=='O') return;
+  $('ticker').innerHTML='Der Computer überlegt …';
+  cpuT=setTimeout(()=>{
+    cpuT=null; if(S.mode!=='cpu') return;
+    const g2=derive(); if(g2.over||g2.pending||g2.revealReq||g2.turn!=='O') return;
+    const open=[...Array(9).keys()].filter(i=>!g2.board[i]);
+    const avail=i=>g2.cache[i].filter(p=>!g2.used.has(p.id));
+    const ans=open.filter(i=>avail(i).length);
+    const lineMove=m=>{ for(const L of LINES){ const ms=L.filter(i=>g2.board[i]?.p===m).length, free=L.filter(i=>!g2.board[i]); if(ms===2&&free.length===1&&ans.includes(free[0])) return free[0]; } return null; };
+    let t=lineMove('O'); if(t==null) t=lineMove('X');
+    if(t==null&&ans.includes(4)) t=4;
+    if(t==null){ const cs=shuffle([0,2,6,8]).filter(i=>ans.includes(i)); t=cs.length?cs[0]:(shuffle(ans)[0]??null); }
+    if(t==null){ act(['p','O']); return; }
+    if(Math.random()<[.5,.72,.9][S.diff]) act(['c','O',t,shuffle(avail(t))[0].id]);
+    else act(['m','O',t,null]);
+  },1000);
+}
+
+// ---------- Online direkt von Handy zu Handy (PeerJS) ----------
+let peer=null, conn=null, retryT=null;
+function validCand(p){
+  return p && typeof p==='object' && p.g===S.gid && Number.isInteger(p.r) && p.r>=0 && p.r<10000
+    && Array.isArray(p.sc) && p.sc.length===3 && p.sc.every(n=>Number.isInteger(n)&&n>=0) && Array.isArray(p.log) && p.log.length<=200;
+}
+const same = (a,b) => JSON.stringify(a)===JSON.stringify(b);
+const isPrefix = (a,b) => a.length<=b.length && a.every((e,i)=>same(e,b[i]));
+// Vergleicht den Stand des Freundes mit dem eigenen: 1 = übernehmen, -1 = eigener ist neuer, 0 = gleich
+function compare(c){
+  if(c.r!==S.r) return c.r>S.r?1:-1;
+  if(same(c.log,S.log)) return 0;
+  if(isPrefix(S.log,c.log)) return 1;
+  if(isPrefix(c.log,S.log)) return -1;
+  return S.role==='X'?-1:1;   // gleichzeitige Züge: der Gastgeber (X) gewinnt
+}
+function publish(){
+  if(S.mode!=='online'||!conn||!conn.open) return;
+  try{ conn.send({t:'state',g:S.gid,r:S.r,sc:S.sc,log:S.log}); }catch(e){}
+}
+function onData(d){
+  if(!d||typeof d!=='object') return;
+  if(d.t==='full'){ S.conn='full'; render(); return; }
+  if(d.t!=='state'||!validCand(d)) return;
+  const cmp=compare(d);
+  if(cmp>0){ S.r=d.r; S.sc=d.sc.slice(); S.log=d.log.slice(); render(); }
+  else if(cmp<0) publish();
+}
+function attach(c){
+  c.on('open',()=>{
+    if(S.mode!=='online'){ c.close(); return; }
+    conn=c; S.opp=true; S.conn='connected'; publish(); render();
+    setTimeout(()=>{ if(S.mode==='online' && S.opp && !S.coinShown && S.r===0 && S.log.length===0){ S.coinShown=true; coinFlip(); } },600);
+  });
+  c.on('data',onData);
+  c.on('close',()=>{ if(conn===c){ conn=null; S.opp=false; render(); if(!S.host) retry(3000); } });
+  c.on('error',()=>{});
+}
+function dial(){ if(!peer||peer.destroyed) return; attach(peer.connect('fttt-'+S.gid,{reliable:true})); }
+function retry(ms){
+  clearTimeout(retryT);
+  retryT=setTimeout(()=>{
+    if(S.mode!=='online'||conn) return;
+    if(!S.host && peer && !peer.destroyed && peer.open) dial();
+    else connectPeer();
+  },ms);
+}
+function connectPeer(){
+  if(typeof Peer==='undefined'){ S.conn='unavailable'; render(); return; }
+  try{ if(peer) peer.destroy(); }catch(e){}
+  const id=S.gid;
+  peer = S.host ? new Peer('fttt-'+id) : new Peer();
+  peer.on('open',()=>{ if(S.gid!==id) return; S.conn='ready'; render(); if(!S.host) dial(); });
+  peer.on('connection',c=>{
+    if(!S.host||S.gid!==id){ c.close(); return; }
+    if(conn&&conn.open){ c.on('open',()=>{ try{ c.send({t:'full'}); }catch(e){} setTimeout(()=>c.close(),800); }); return; }
+    attach(c);
+  });
+  peer.on('disconnected',()=>{ try{ if(!peer.destroyed) peer.reconnect(); }catch(e){} });
+  peer.on('error',err=>{
+    if(S.gid!==id||S.mode!=='online') return;
+    const t=err&&err.type;
+    if(t==='peer-unavailable'){ S.conn='waitHost'; render(); retry(4000); return; }
+    if(t==='unavailable-id'){ S.conn='connecting'; render(); retry(5000); return; }   // alte Sitzung hält die ID noch kurz
+    if(t==='browser-incompatible'){ S.conn='unavailable'; render(); return; }
+    S.conn='error'; render(); retry(5000);
+  });
+}
+function goOnline(id,diff,host,timer){
+  leaveOnline();
+  Object.assign(S,{screen:'game',mode:'online',gid:id,diff,timer,first:coinFirst(id),coinShown:false,choice:null,r:0,sc:[0,0,0],log:[],role:host?'X':'O',host,conn:'connecting',opp:false,sel:null,local:null,msg:'',solOpen:false});
+  const h='spiel-'+id+'-'+diff+'-'+timer;
+  try{ if(location.hash!=='#'+h) location.hash=h; }catch(e){}
+  render(); connectPeer();
+}
+function leaveOnline(){
+  clearTimeout(retryT);
+  try{ if(conn) conn.close(); }catch(e){}
+  try{ if(peer) peer.destroy(); }catch(e){}
+  conn=null; peer=null; S.opp=false; S.conn='';
+}
+function clearHash(){ try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} }
+
+// ---------- Spielstart ----------
+function startLocal(mode){
+  leaveOnline(); clearTimeout(cpuT); cpuT=null; clearHash();
+  Object.assign(S,{screen:'game',mode,gid:randId(),r:0,sc:[0,0,0],log:[],sel:null,local:null,msg:'',solOpen:false,choice:null});
+  S.first=coinFirst(S.gid);
+  coinFlip(()=>scheduleCpu());
+}
+function startFriend(){
+  const id=randId();
+  try{ localStorage.setItem('ttt-host-'+id,'1'); }catch(e){}
+  goOnline(id,S.diff,true,S.timer);
+}
+function toMenu(){
+  leaveOnline(); clearTimeout(cpuT); cpuT=null; clearHash();
+  clearTimeout(coinT); S.coinBusy=false; $('coinlayer').hidden=true;
+  S.screen='menu'; S.mode=null; S.gid=''; render();
+}
+function nextRound(){
+  const g=derive(); if(!g.over||!isPlayer()) return;
+  S.sc=addResult(S.sc,g.over); S.r++; S.log=[]; S.sel=null; S.local=null; S.solOpen=false;
+  publish(); render(); scheduleCpu();
+}
+function fromHash(){
+  const m=/^#spiel-([a-z0-9]{6,12})-([012])(?:-(0|45))?$/.exec(location.hash||'');
+  if(!m) return false;
+  if(S.mode==='online'&&S.gid===m[1]) return true;
+  let host=false; try{ host=localStorage.getItem('ttt-host-'+m[1])==='1'; }catch(e){}
+  goOnline(m[1],+m[2],host,m[3]===undefined?45:+m[3]); return true;
+}
+
+// ---------- Münzwurf ----------
+// Das Ergebnis hängt nur von der Spiel-ID ab, darum zeigen online beide Handys dieselbe Seite der Münze.
+function coinFirst(gid){ return rng(gid+'-muenze')()<0.5?'X':'O'; }
+function startText(R){
+  if(S.mode==='cpu') return R==='X'?'Du beginnst!':'Der Computer beginnt.';
+  if(S.mode==='online') return R===S.role?'Du beginnst!':'Dein Freund beginnt.';
+  return 'Spieler '+R+' beginnt!';
+}
+let coinT=null;
+function coinFlip(after){
+  const lay=$('coinlayer'), coin=$('coin'), stage=$('coinstage'), R=S.first;
+  clearTimeout(coinT); S.coinBusy=true; S.sel=null; lay.hidden=false; lay.onclick=null;
+  $('coinMsg').textContent='Wer beginnt?'; $('coinSub').textContent='';
+  render();
+  let reduce=false; try{ reduce=matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
+  const end=1800+(R==='O'?180:0), dur=reduce?0:2300;
+  try{ coin.getAnimations().forEach(a=>a.cancel()); stage.getAnimations().forEach(a=>a.cancel()); }catch(e){}
+  if(dur && coin.animate){
+    coin.style.transform='';
+    coin.animate([{transform:'rotateX(0deg)'},{transform:`rotateX(${end}deg)`}],{duration:dur,easing:'cubic-bezier(.12,.55,.25,1)',fill:'forwards'});
+    stage.animate([{transform:'translateY(0)'},{transform:'translateY(-38px) scale(1.2)',offset:.4},{transform:'translateY(0)'}],{duration:dur,easing:'ease-in-out'});
+  } else coin.style.transform=`rotateX(${end}deg)`;
+  coinT=setTimeout(()=>{
+    $('coinMsg').innerHTML=`<b class="${R}">${R}</b>${esc(startText(R))}`;
+    $('coinSub').textContent='Tippen zum Starten';
+    const close=()=>{ clearTimeout(coinT); lay.onclick=null; lay.hidden=true; S.coinBusy=false; clockKey=''; render(); if(after) after(); };
+    lay.onclick=close;
+    coinT=setTimeout(close,1700);
+  },dur+200);
+}
+
+// ---------- Zeitlimit ----------
+// Jeder Zug hat S.timer Sekunden. Die Uhr startet neu, sobald sich Runde oder Zugprotokoll ändern.
+// Online meldet zuerst das Gerät des Spielers am Zug den Ablauf, das andere Gerät nach 3 Sekunden Kulanz.
+// Beide schreiben denselben Eintrag ['z', Spieler], deshalb entsteht kein Widerspruch.
+const CLOCK_GRACE = 3000;
+let clockKey='', clockStart=0, clockFired='';
+function clockInfo(){
+  if(S.screen!=='game' || !S.timer || S.coinBusy) return null;
+  const g=derive();
+  if(g.over || g.pending || g.revealReq) return null;
+  if(S.mode==='cpu' && g.turn!=='X') return null;
+  if(S.mode==='online' && !(S.opp && (S.role==='X'||S.role==='O'))) return null;
+  const key=[S.mode,S.gid,S.r,S.log.length,S.opp?1:0].join('|');
+  if(key!==clockKey){ clockKey=key; clockStart=Date.now(); }
+  return {R:g.turn, key, left:S.timer*1000-(Date.now()-clockStart)};
+}
+function tickClock(noFire){
+  const box=$('clock'), pc=$('pClock'), info=clockInfo();
+  if(!info){ box.hidden=true; pc.textContent=''; return; }
+  const total=S.timer*1000, left=Math.max(0,info.left), secs=Math.ceil(left/1000);
+  const txt=Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0');
+  box.hidden=false;
+  box.className='clock '+info.R+(secs<=10?' low':'')+(secs<=5&&secs>0?' crit':'');
+  $('clockWho').innerHTML=`<b class="${info.R}">${info.R}</b>${esc(nameFor(info.R))}`;
+  $('clockNum').textContent=txt;
+  $('clockFill').style.transform='scaleX('+(left/total).toFixed(3)+')';
+  pc.textContent=S.sel!=null?txt:'';
+  pc.classList.toggle('low',secs<=10);
+  if(noFire || info.left>0 || clockFired===info.key) return;
+  const mine = S.mode!=='online' || S.role===info.R;
+  if(mine || info.left<=-CLOCK_GRACE){ clockFired=info.key; act(['z',info.R]); }
+}
+
+// ---------- Events ----------
+document.querySelectorAll('[data-d]').forEach(b=>b.addEventListener('click',()=>{ S.diff=+b.dataset.d; document.querySelectorAll('[data-d]').forEach(x=>x.setAttribute('aria-pressed',x===b)); }));
+document.querySelectorAll('[data-t]').forEach(b=>b.addEventListener('click',()=>{ S.timer=+b.dataset.t; document.querySelectorAll('[data-t]').forEach(x=>x.setAttribute('aria-pressed',x===b)); }));
+setInterval(()=>{ try{ tickClock(false); }catch(e){} },250);
+$('goFriend').addEventListener('click',startFriend);
+$('goCpu').addEventListener('click',()=>startLocal('cpu'));
+$('goLocal').addEventListener('click',()=>startLocal('local'));
+$('toMenu').addEventListener('click',toMenu);
+$('grid').addEventListener('click',e=>{ const b=e.target.closest('.cell'); if(!b||b.disabled||S.local||S.choice) return; openPanel(+b.dataset.i); });
+$('form').addEventListener('submit',e=>{ e.preventDefault(); submit(); });
+$('answer').addEventListener('input',()=>{ S.pick=null; if(S.msg){ S.msg=''; $('verdict').innerHTML=''; } showSugg(); });
+$('sugg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; const p=DB[+b.dataset.id]; S.pick=p.id; $('answer').value=p.name; showSugg(); submit(); });
+$('cancel').addEventListener('click',()=>{ if(S.local||S.choice) return; S.sel=null; S.local=null; S.msg=''; render(); });
+$('verdict').addEventListener('click',e=>{
+  const a=e.target.closest('button')?.dataset.act; if(!a) return;
+  const g=derive();
+  if((a==='jy'||a==='jn') && canJudge(g)) act(['j',opp(g.pending.R),a==='jy']);
+  if((a==='miss'||a==='appeal') && S.local && myTurn(g)){ const L=S.local; act([a==='miss'?(L.used?'d':'m'):'a',g.turn,L.i,L.id]); }
+  if(a==='pick' && S.choice && myTurn(g)){ const id=+e.target.closest('button').dataset.id; S.choice=null; S.pick=id; $('answer').value=DB[id].name; submit(); }
+  if(a==='none' && S.choice && myTurn(g)){ const q=S.choice.q; S.choice=null; act(['u',g.turn,S.sel,cleanName(q)]); }
+  if((a==='vy'||a==='vno') && g.revealReq){ const other=opp(g.revealReq.R); if(S.mode==='local' || (S.mode==='online' && S.opp && S.role===other)) act(['va',other,a==='vy']); }
+});
+$('pass').addEventListener('click',()=>{ const g=derive(); if(myTurn(g)) act(['p',g.turn]); });
+$('reveal').addEventListener('click',()=>{
+  const g=derive(); if(g.over||g.pending||g.revealReq||!isPlayer()||S.coinBusy) return;
+  const R=S.mode==='online'?S.role:(S.mode==='cpu'?'X':g.turn);
+  if(g.reqUsed.includes(R)) return;
+  act(['vr',R]);
+});
+$('newgrid').addEventListener('click',()=>{ if(S.mode==='online') return; S.r++; S.log=[]; S.sel=null; S.local=null; render(); scheduleCpu(); });
+$('next').addEventListener('click',nextRound);
+$('showSol').addEventListener('click',()=>{ S.solOpen=!S.solOpen; render(); });
+$('showCnt').addEventListener('change',e=>{ S.showCnt=e.target.checked; render(); });
+$('copy').addEventListener('click',()=>{
+  const v=$('linkInput').value, btn=$('copy');
+  const selectIt=()=>{ $('linkInput').focus(); $('linkInput').select(); btn.textContent='Markiert – jetzt kopieren'; };
+  try{ navigator.clipboard.writeText(v).then(()=>{ btn.textContent='Kopiert'; setTimeout(()=>btn.textContent='Link kopieren',1600); }, selectIt); }catch(e){ selectIt(); }
+});
+window.addEventListener('hashchange',()=>{ if(!fromHash() && S.mode==='online') toMenu(); });
+
+if(!fromHash()) render();
+</script>
+
+</body>
+</html>
